@@ -1,11 +1,4 @@
-Require Import Case_Tactics.
-Require Import Omega.
-Require Import NArith.
-Open Scope bool_scope.
-
-(* MOVE TO LIB *)
-Ltac inv H := inversion H; clear H; try subst.
-Hint Unfold not.
+Require Import Lib.
 
 (* Encoding of sets of N *)
 
