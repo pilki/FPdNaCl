@@ -135,3 +135,72 @@ Definition to_word n :=
   let (b4, n4):= fst_byte n3 in
   W b1 b2 b3 b4.
 
+Lemma translate_0_by t: translate_N_by t 0 = 0.
+Proof. induction t; auto. Qed.
+
+Lemma translate_N_by_0 n: translate_N_by 0 n = n.
+Proof.
+  destruct n; simpl; auto.
+Qed.
+
+Lemma translate_P_tilde_0 t: forall p, translate_P_by t (p~0) = (translate_P_by t p)~0.
+Proof.
+  induction t; auto.
+  intro p. simpl. rewrite IHt. auto.
+Qed.
+
+Lemma translate_P_and: forall t p1 p2, (exists p1', p1 = translate_P_by t p1') ->
+  forall p, list_to_P (list_and (P_to_list p1) (P_to_list p2)) = Some p ->
+  exists p', p = translate_P_by t p'.
+Proof.
+  induction' t as [|t]; intros * EXISTS * SOME.
+  Case "0%nat".
+    simpl. eauto.
+  Case "S t".
+    destruct EXISTS as [p1' Hp1'].
+
+    replace (S t) with (1 + t)%nat in Hp1' by reflexivity.
+    rewrite <- translate_P_plus in Hp1'.
+    simpl in Hp1'. subst.
+    simpl in SOME.
+
+
+    destruct (P_to_list p2) as [] _eqn. inv SOME.
+    simpl in *.
+    match type of SOME with
+      | match ?EXP with | Some _ => _ | None => _ end = _ =>
+        destruct EXP as [] _eqn
+    end; inv SOME.
+
+    destruct' p2 as [p2|p2|]; inv Heql.
+    SCase "xI p2".
+      edestruct IHt; eauto. exists x. rewrite translate_P_tilde_0. congruence.
+    SCase "xO p2".
+      edestruct IHt; eauto. exists x. rewrite translate_P_tilde_0. congruence.
+    SCase "1%positive".
+      destruct (P_to_list (translate_P_by t p1')); inv Heqo.
+Qed.
+
+
+Lemma translate_and: forall t n1 n2, (exists n1', n1 = translate_N_by t n1') ->
+  exists n, N_and n1 n2 = translate_N_by t n.
+Proof.
+  intros.
+  destruct' n1 as [|pos1]; destruct' n2 as [|pos2]; unfold N_and; simpl;
+    try solve [exists 0; rewrite translate_0_by; reflexivity].
+  Case "Npos pos1"; SCase "0".
+    exists 0. simpl.
+    destruct (P_to_list pos1); reflexivity.
+  Case "Npos pos1"; SCase "Npos pos2".
+
+  destruct H. destruct x; inversion H.
+
+  unfold list_to_N.
+  destruct (list_to_P (list_and (P_to_list (translate_P_by t p)) (P_to_list pos2))) as [] _eqn.
+    edestruct translate_P_and.
+    exists p. eassumption.
+    subst. eassumption.
+    exists (Npos x). simpl. congruence.
+
+    exists 0. simpl. reflexivity.
+Qed.

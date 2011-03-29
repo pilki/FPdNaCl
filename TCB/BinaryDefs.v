@@ -1,4 +1,6 @@
+Require Import List.
 Require Import Lib.
+Require Import Omega.
 Open Scope positive_scope.
 Open Scope N_scope.
 
@@ -114,4 +116,78 @@ Definition word_to_N w :=
       let n2 := concat_byte n3 b2 in
       concat_byte n2 b1
   end.
+
+
+(* logical and *)
+
+Fixpoint P_to_list p : list bool :=
+  match p with
+    | xH => true :: nil
+    | xO p' => false :: P_to_list p'
+    | xI p' => true :: P_to_list p'
+  end.
+
+Fixpoint list_to_P l : option positive :=
+  match l with
+    | nil => None
+    | false :: l' =>
+      match list_to_P l' with
+        | None => None
+        | Some p => Some (xO p)
+      end
+    | true :: l' =>
+      match list_to_P l' with
+        | None => Some xH
+        | Some p => Some (xI p)
+      end
+  end.
+
+Lemma P_to_list_to_P: forall p, list_to_P (P_to_list p) = Some p.
+Proof.
+  induction' p; auto; simpl; rewrite IHp; congruence.
+Qed.
+
+Definition N_to_list n :=
+  match n with
+    | N0 => nil
+    | Npos pos => P_to_list pos
+  end.
+
+Definition list_to_N l :=
+  match list_to_P l with
+    | None => N0
+    | Some pos => Npos pos
+  end.
+
+Lemma N_to_list_to_N: forall n, list_to_N (N_to_list n) = n.
+Proof.
+  destruct n; unfold N_to_list, list_to_N; simpl.
+  reflexivity.
+  rewrite P_to_list_to_P. reflexivity.
+Qed.
+
+Fixpoint list_and l1 l2 : list bool :=
+  match l1, l2 with
+    | nil, _
+    | _, nil => nil
+    | b1:: l1', b2::l2' => (b1 && b2)%bool :: list_and l1' l2'
+  end.
+
+Definition N_and n1 n2 :=
+  list_to_N (list_and (N_to_list n1) (N_to_list n2)).
+
+Lemma list_and_same: forall l, list_and l l = l.
+Proof.
+  induction' l as [|b l]; simpl; auto.
+  Case "cons b l".
+  destruct b; f_equal; auto.
+Qed.
+
+Lemma N_and_same: forall n, N_and n n = n.
+Proof.
+  intros.
+  unfold N_and. rewrite list_and_same. apply N_to_list_to_N.
+Qed.
+
+
 
