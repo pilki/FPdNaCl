@@ -188,6 +188,3 @@ Proof.
   intros.
   unfold N_and. rewrite list_and_same. apply N_to_list_to_N.
 Qed.
-
-
-
