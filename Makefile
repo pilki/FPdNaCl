@@ -20,8 +20,8 @@ OCB_OPTIONS=\
 VPATH=$(DIRS)
 GPATH=$(DIRS)
 
-NTCB=NSet.v Lib.v
-TCB=
+NTCB=NSet.v Lib.v BinaryAux.v
+TCB=BinaryDefs.v BinaryProps.v
 
 EXTRACTION=extraction.v
 

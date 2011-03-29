@@ -1,93 +1,10 @@
 Require Import Lib.
-
-(* Definitions relative to binary representation. See
-   TCB/BinaryProofs.v for the related proofs *)
-
-
-(* Definition of a half byte *)
-
-Inductive half_byte :=
-| HB0
-| HB1
-| HB2
-| HB3
-| HB4
-| HB5
-| HB6
-| HB7
-| HB8
-| HB9
-| HBA
-| HBB
-| HBC
-| HBD
-| HBE
-| HBF.
-
-Lemma half_byte_eq_dec: forall hb1 hb2: half_byte, {hb1 = hb2} + {hb1 <> hb2}.
-Proof. decide equality. Qed.
-
-
+Require Import BinaryDefs.
 Open Scope positive_scope.
 Open Scope N_scope.
 
-Definition half_byte_to_N hb : N:=
-  match hb with
-    | HB0 => 0
-    | HB1 => 1
-    | HB2 => 2
-    | HB3 => 3
-    | HB4 => 4
-    | HB5 => 5
-    | HB6 => 6
-    | HB7 => 7
-    | HB8 => 8
-    | HB9 => 9
-    | HBA => 10
-    | HBB => 11
-    | HBC => 12
-    | HBD => 13
-    | HBE => 14
-    | HBF => 15
-  end.
-
-(* add [trans] 0 bits *)
-
-Fixpoint translate_P_by trans (p: positive) :=
-  match trans with
-    | O => p
-    | S t' => translate_P_by t' (p~0)
-  end.
-
-Definition translate_N_by trans (n: N) :=
-  match n with
-    | N0 => N0
-    | Npos p => Npos (translate_P_by trans p)
-  end.
-
-(* specialisation for efficiency reasons *)
-Definition translate_N_by_four n :=
-  match n with
-    | N0 => N0
-    | Npos p => Npos (p~0~0~0~0)
-  end.
-
-Definition translate_N_by_eight n :=
-  match n with
-    | 0 => 0
-    | Npos p => Npos (p~0~0~0~0~0~0~0~0)
-  end.
-
-Lemma translate_N_by_four_correct: forall n, translate_N_by_four n = translate_N_by 4 n.
-Proof.
-  intros [|pos]; reflexivity.
-Qed.
-
-Lemma translate_N_by_eight_correct: forall n, translate_N_by_eight n = translate_N_by 8 n.
-Proof.
-  intros [|pos]; reflexivity.
-Qed.
-
+Lemma half_byte_eq_dec: forall hb1 hb2: half_byte, {hb1 = hb2} + {hb1 <> hb2}.
+Proof. decide equality. Qed.
 
 
 
@@ -127,9 +44,6 @@ Definition fst_four_bits n : (half_byte * N) :=
     | Npos (p ~1~1~1~1) => (HBF, Npos p)
   end.
 
-
-Definition concat_half_byte n hb := (translate_N_by_four n) + (half_byte_to_N hb).
-
 Lemma fst_four_bits_of_half_byte: forall hb n,
   fst_four_bits (concat_half_byte n hb) = (hb, n).
 Proof.
@@ -137,30 +51,11 @@ Proof.
 Qed.
 
 
-
-
-(* Bytes *)
-
-Definition byte := (half_byte * half_byte)%type.
-
-Definition byte_to_N (b: byte) : N:=
-  concat_half_byte (half_byte_to_N (fst b)) (snd b).
-(*  (translate_N_by_four (half_byte_to_N (fst b))) + (half_byte_to_N (snd b)).*)
-
-Definition byte0 : byte := (HB0, HB0).
-
-Lemma byte_to_N0: byte_to_N byte0 = 0.
-Proof.
-  reflexivity.
-Qed.
-
 Definition fst_byte n : (byte * N) :=
   let (hb1, n1) := fst_four_bits n in
   let (hb2, n2) := fst_four_bits n1 in
   ((hb2, hb1), n2).
 
-Definition concat_byte n (b: byte) :=
-  translate_N_by_eight n + byte_to_N b.
 
 (* for proof purpose *)
 Definition concat_byte_aux n (b: byte) :=
@@ -233,33 +128,6 @@ Proof.
 Qed.
 
 
-
-Lemma fst_byte_of_byte: forall b n,
-  fst_byte (concat_byte n b) = (b, n).
-Proof.
-  intros.
-  rewrite concat_byte_aux_correct.
-  destruct b as (hb2, hb1).
-  unfold fst_byte.
-  simpl.
-  repeat rewrite fst_four_bits_of_half_byte. reflexivity.
-Qed.
-
-
-
-
-(* a word is four byte, little endian *)
-Inductive word := W : byte -> byte -> byte -> byte -> word.
-
-Definition word_to_N w :=
-  match w with
-    | W b1 b2 b3 b4 =>
-      let n4 := byte_to_N b4 in
-      let n3 := concat_byte n4 b3 in
-      let n2 := concat_byte n3 b2 in
-      concat_byte n2 b1
-  end.
-
 Definition to_word n :=
   let (b1, n1):= fst_byte n in
   let (b2, n2):= fst_byte n1 in
@@ -267,13 +135,3 @@ Definition to_word n :=
   let (b4, n4):= fst_byte n3 in
   W b1 b2 b3 b4.
 
-Lemma fst_word_of_word: forall w,
-  to_word (word_to_N w) = w.
-Proof.
-  destruct w as [b1 b2 b3 b4].
-  unfold to_word.
-  simpl. repeat rewrite fst_byte_of_byte.
-  unfold fst_byte, byte_to_N.
-  rewrite fst_four_bits_of_half_byte.
-  destruct b4. simpl. destruct h; reflexivity.
-Qed.
