@@ -20,12 +20,12 @@ OCB_OPTIONS=\
 VPATH=$(DIRS)
 GPATH=$(DIRS)
 
-NTCB=NSet.v Lib.v BinaryAux.v
+NTCB=NSet.v Lib.v BinaryAux.v Semantics.v
 TCB=BinaryDefs.v BinaryProps.v
 
 EXTRACTION=extraction.v
 
-FILES=$(NTCB)
+FILES=$(NTCB) $(TCB)
 
 proof: $(FILES:.v=.vo)
 

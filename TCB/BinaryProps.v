@@ -1,6 +1,5 @@
 Require Import Lib.
-Require Import BinaryDefs.
-Require Import BinaryAux.
+Require Export BinaryAux.
 Open Scope positive_scope.
 Open Scope N_scope.
 
