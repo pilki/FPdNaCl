@@ -25,8 +25,6 @@ CoInductive lazy (X:Type) :=
 | Lazy : X -> lazy X.
 Implicit Arguments Lazy [[X]].
 
-Extraction lazy.
-
 Unset Elimination Schemes.
 
 Inductive lazy_list (X:Type) :=
@@ -36,10 +34,11 @@ Inductive lazy_list (X:Type) :=
 Implicit Arguments ll_nil [[X]].
 Implicit Arguments ll_cons [[X]].
 
-Notation "œôû© œôûª" := (ll_nil).
 Notation "x ::: ll" := (ll_cons x (Lazy ll)) (at level 60, right associativity).
 
-Notation "œôû© x ; .. ; z œôûª" := (ll_cons x (Lazy ( .. (ll_cons z (Lazy ll_nil)) .. ))).
+Notation "âŒ© âŒª" := (ll_nil).
+
+Notation "âŒ© x ; .. ; z âŒª" := (ll_cons x (Lazy ( .. (ll_cons z (Lazy ll_nil)) .. ))).
 
 
 Set Elimination Schemes.
@@ -47,7 +46,7 @@ Set Elimination Schemes.
 Fixpoint lazy_list_rect (A:Type) (P : lazy_list A -> Type) (Hnil: P ll_nil)
   (Hcons: forall (a: A) ll, P ll -> P (ll_cons a (Lazy ll))) (l: lazy_list A) : P l :=
   match l as l0 return P l0 with
-    | œôû©œôûª => Hnil
+    | âŒ©âŒª => Hnil
     | x ::: l' => (Hcons x l' (lazy_list_rect P Hnil Hcons l'))
   end.
 
@@ -59,13 +58,13 @@ Definition lazy_list_ind (A:Type) (P : lazy_list A -> Prop) (Hnil: P ll_nil)
 
 Fixpoint to_list {X} (ll: lazy_list X) : list X :=
   match ll with
-    | œôû©œôûª => []
+    | âŒ©âŒª => []
     | x ::: l' => x :: to_list l'
   end.
 
 Fixpoint ll_length {X} (l: lazy_list X) : nat :=
   match l with
-    | œôû©œôûª => O
+    | âŒ©âŒª => O
     | x ::: l' => S (ll_length l')
   end.
 
@@ -78,7 +77,7 @@ Qed.
 
 Fixpoint ll_nth {X} n (ll: lazy_list X) :=
   match n, ll with
-    | _ ,œôû©œôûª => None
+    | _ ,âŒ©âŒª => None
     | O, x ::: _ => Some x
     | S n', _ ::: ll' => ll_nth n' ll'
   end.
@@ -92,13 +91,13 @@ Qed.
 
 Definition byte_map := nat -> option byte.
 Definition eq_byte_map (bm1 bm2: byte_map) := forall n, bm1 n = bm2 n.
-Notation "bm1 œôù¡ bm2":= (eq_byte_map bm1 bm2) (at level 70, no associativity).
+Notation "bm1 â‰¡ bm2" := (eq_byte_map bm1 bm2) (at level 70, no associativity).
 
 
 Definition start_map_from (start: nat) (bm: byte_map) : byte_map :=
   fun n => bm (start + n)%nat.
 
-Lemma start_map_from_0: forall bm, start_map_from 0 bm œôù¡ bm.
+Lemma start_map_from_0: forall bm, start_map_from 0 bm â‰¡ bm.
 Proof.
   intros bm n.
   unfold start_map_from. simpl. reflexivity.
@@ -128,12 +127,19 @@ Inductive is_some {X}: option X -> Prop :=
 Inductive instruction_classification (register:Type) : Type :=
   (* an instruction that only modifies register and memory, but does not jump *)
 | OK_instr: instruction_classification register
+  (* an instruction that masks the value of a register *)
+| Mask_instr: register -> word -> instruction_classification register
   (* a (optional) direct jump to a static address *)
 | Direct_jump: word -> instruction_classification register
   (* an (optional) indirect jump to the address in a given register *)
 | Indirect_jump: register -> instruction_classification register
   (* a dangerous instruction *)
 | Invalid_instruction: instruction_classification register.
+
+Implicit Arguments OK_instr [[register]].
+Implicit Arguments Direct_jump [[register]].
+Implicit Arguments Indirect_jump [[register]].
+Implicit Arguments Invalid_instruction [[register]].
 
 Definition memory := N -> option byte.
 
@@ -148,26 +154,23 @@ Implicit Arguments state_regs [[register]].
 Implicit Arguments state_pc [[register]].
 
 (* the target state of a semantic transformation *)
-Inductive target_state register :=
-| Good_state: state register -> target_state register
-| Bad_state: target_state register.
+Inductive instruction_target_state register :=
+| Good_state: state register -> instruction_target_state register
+| Bad_state: instruction_target_state register.
 
 Implicit Arguments Good_state [[register]].
 Implicit Arguments Bad_state [[register]].
 
-Inductive is_good_state {register}: target_state register -> Prop :=
+Inductive is_good_state {register}: instruction_target_state register -> Prop :=
 | Is_Good_State: forall state, is_good_state (Good_state state).
 
 
 
-Module Type INSTRUCTIONS.
+Module Type INSTRUCTION.
 
   Parameter register: Type.
   Parameter register_eq_dec: forall r1 r2: register, {r1 = r2}+{r1 <> r2}.
-
-
   Parameter instruction: Type.
-
 
   (* parse an instruction *)
   Parameter parse_instruction: byte_map -> option (instruction * nat).
@@ -182,21 +185,128 @@ Module Type INSTRUCTIONS.
       parse_instruction bm' = Some (instr, n).
 
   Parameter classify_instruction: instruction -> instruction_classification register.
+End INSTRUCTION.
 
+
+Module Type INSTRUCTION_SEMANTICS(Import I: INSTRUCTION).
   (* the first parameter is to indicate that the n first bytes of the memory
      cannot be written *)
-  Parameter instruction_semantic: N -> instruction -> state register ->
-    target_state register -> Prop.
+  Parameter instruction_semantics: N -> instruction ->
+    state register -> instruction_target_state register -> Prop.
 
 
-  Parameter sem_no_overwrite: forall code_size instr st1 st2,
-    instruction_semantic code_size instr st1 (Good_state st2) ->
-    forall n', n' < code_size -> st1.(state_mem) n' = st2.(state_mem) n'.
+  (* an instruction cannot write in the lower code segment *)
+  Parameter sem_no_overwrite: forall code_segment_size instr st1 st2,
+    instruction_semantics code_segment_size instr st1 (Good_state st2) ->
+    forall n', n' < code_segment_size -> st1.(state_mem) n' = st2.(state_mem) n'.
+
+  (* the "good" instructions can get stuck but neverr lead to a "bad state" *)
+
+  Parameter sem_not_invalid_not_bad: forall instr,
+    classify_instruction instr <> Invalid_instruction ->
+    forall code_segment_size st tst,
+      instruction_semantics code_segment_size instr st tst ->
+      is_good_state tst.
 
 
-  Parameter sem_good_not_bad: forall code_size instr st tst,
-    classify_instruction instr = Ok_instr
+  Parameter sem_OK_instr_pc: forall bm instr size,
+    parse_instruction bm = Some (instr, size) ->
+    classify_instruction instr = OK_instr ->
+    forall code_segment_size st1 st2,
+    instruction_semantics code_segment_size instr st1 (Good_state st2) ->
+    st2.(state_pc) = st1.(state_pc) + (N_of_nat size).
+
+  Parameter sem_Mask_instr_pc: forall bm instr size,
+    parse_instruction bm = Some (instr, size) ->
+    forall reg w,
+    classify_instruction instr = Mask_instr reg w->
+    forall code_segment_size st1 st2,
+    instruction_semantics code_segment_size instr st1 (Good_state st2) ->
+    st2.(state_pc) = st1.(state_pc) + (N_of_nat size).
+
+  Parameter sem_Direct_jump_pc: forall bm instr size,
+    parse_instruction bm = Some (instr, size) ->
+    forall w,
+    classify_instruction instr = Direct_jump w ->
+    forall code_segment_size st1 st2,
+    instruction_semantics code_segment_size instr st1 (Good_state st2) ->
+    st2.(state_pc) = st1.(state_pc) + (N_of_nat size) \/
+    st2.(state_pc) = word_to_N w.
+
+  Parameter sem_Indirect_jump_pc: forall bm instr size,
+    parse_instruction bm = Some (instr, size) ->
+    forall reg,
+    classify_instruction instr = Indirect_jump reg ->
+    forall code_segment_size st1 st2,
+    instruction_semantics code_segment_size instr st1 (Good_state st2) ->
+    st2.(state_pc) = st1.(state_pc) + (N_of_nat size) \/
+    st2.(state_pc) = word_to_N (st1.(state_regs) reg).
+
+End INSTRUCTION_SEMANTICS.
+
+(* Define the semantics of programs, parameterized by those of instruction *)
+Module Prog_Semantics (Import I: INSTRUCTION)(Import IS:INSTRUCTION_SEMANTICS(I)).
+
+  Inductive target_state :=
+    (* a regular state *)
+  | Normal_state: state register -> target_state
+    (* after a jump in the header *)
+  | Header_code : state register -> target_state
+    (* after a jump outside of the code segment *)
+  | Non_executable_code: state register -> target_state
+    (* a state that should *never* be reached ! *)
+  | DANGER_STATE: target_state.
+
+
+  Definition read_instr_from_memory (mem: memory) (pc: N): option (instruction * nat) :=
+    parse_instruction (fun n => mem ((N_of_nat n) + pc)).
 
 
 
-End INSTRUCTIONS.
+  (* parse an instruction *)
+  Definition same_code (code_segment_size: N) (mem1 mem2: memory): Prop:=
+    forall n, n < code_segment_size -> mem1 n = mem2 n.
+
+  Inductive step (header_size code_size: N) (st1: state register): target_state -> Prop :=
+    (* if no instruction can be read, something wrong is hapening *)
+  | Step_cannot_read_instr:
+    read_instr_from_memory st1.(state_mem) st1.(state_pc) = None ->
+    step header_size  code_size st1 DANGER_STATE
+    (* if we can read an instruction, and its execution goes wrong, it is wrong *)
+  | Step_bad: forall instr n,
+    read_instr_from_memory st1.(state_mem) st1.(state_pc) = Some (instr, n) ->
+    instruction_semantics (header_size + code_size) instr st1 Bad_state ->
+    step header_size code_size st1 DANGER_STATE
+  | Step_header: forall instr n st2,
+    read_instr_from_memory st1.(state_mem) st1.(state_pc) = Some (instr, n) ->
+    instruction_semantics (header_size + code_size) instr st1 (Good_state st2) ->
+    st2.(state_pc) < header_size ->
+    step header_size code_size st1 (Header_code st2)
+  | Step_outside: forall instr n st2,
+    read_instr_from_memory st1.(state_mem) st1.(state_pc) = Some (instr, n) ->
+    instruction_semantics (header_size + code_size) instr st1 (Good_state st2) ->
+    st2.(state_pc) >= header_size + code_size ->
+    step header_size code_size st1 (Non_executable_code st2)
+  | Step_good: forall instr n st2,
+    read_instr_from_memory st1.(state_mem) st1.(state_pc) = Some (instr, n) ->
+    instruction_semantics (header_size + code_size) instr st1 (Good_state st2) ->
+    st2.(state_pc) >= header_size -> st2.(state_pc) < header_size + code_size->
+    (* we allow any modification of the memory outside of the code
+       segment because of multi threading *)
+    forall m2', same_code (header_size + code_size) m2' st2.(state_mem) ->
+    step header_size code_size st1
+      (Normal_state {| state_mem := m2'; state_pc := st2.(state_pc); state_regs :=st2.(state_regs) |}).
+
+
+  (* is DANGER_STATE accessible from a state ? *)
+  Inductive accessible_danger (header_size code_size: N) (st1: state register) : Prop :=
+  | AD_one_step:
+    step header_size code_size st1 DANGER_STATE ->
+    accessible_danger header_size code_size st1
+  | AD_more_steps: forall st2,
+    step header_size code_size st1 (Normal_state st2)  ->
+    accessible_danger header_size code_size st2 ->
+    accessible_danger header_size code_size st1.
+
+End Prog_Semantics.
+
