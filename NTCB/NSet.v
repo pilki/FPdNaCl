@@ -265,7 +265,7 @@ Proof.
   intros * INCL n IN.
   destruct ns as (b, ps); destruct n; inv IN; simpl in *.
   congruence.
-  eapply Pincluded_Pempty; eauto. destruct b; simpl in *; auto. congruence.
+  eapply Pincluded_Pempty; eauto. destruct b; simpl in *; auto.
 Qed.
 
 

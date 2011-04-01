@@ -25,7 +25,10 @@ Inductive half_byte :=
 | HBE
 | HBF.
 
-
+Lemma half_byte_eq_dec: eq_dec half_byte.
+Proof.
+  unfold eq_dec. decide equality.
+Qed.
 
 Definition half_byte_to_N hb : N:=
   match hb with
@@ -95,6 +98,11 @@ Definition concat_half_byte n hb := (translate_N_by_four n) + (half_byte_to_N hb
 
 Definition byte := (half_byte * half_byte)%type.
 
+Lemma byte_eq_dec: eq_dec byte.
+Proof.
+  unfold eq_dec; decide equality; apply half_byte_eq_dec.
+Qed.
+
 Definition byte_to_N (b: byte) : N:=
   concat_half_byte (half_byte_to_N (fst b)) (snd b).
 
@@ -107,6 +115,11 @@ Definition concat_byte n (b: byte) :=
 
 (* a word is four byte, little endian *)
 Inductive word := W : byte -> byte -> byte -> byte -> word.
+
+Lemma word_eq_dec: forall (w1 w2: word), {w1 = w2}+{w1 <> w2}.
+Proof.
+  unfold eq_dec; decide equality; apply byte_eq_dec.
+Qed.
 
 Definition word_to_N w :=
   match w with
@@ -188,3 +201,4 @@ Proof.
   intros.
   unfold N_and. rewrite list_and_same. apply N_to_list_to_N.
 Qed.
+

@@ -2,126 +2,9 @@ Require Import Lib.
 Require Import BinaryProps.
 Require Import List.
 Require Import Program.
+Require Import LazyList.
 
 Set Implicit Arguments.
-(* move to lib *)
-Notation "[ ]" := (nil).
-Notation "[ x , .. , z ]" := (cons x ( .. (cons z []) .. )).
-
-Fixpoint list_take {A} n (l: list A) : list A:=
-  match n, l with
-    | O, _
-    | _, [] => []
-    | S n', h::t => h :: (list_take n' t)
-  end.
-
-Fixpoint list_drop {A} n (l: list A) : list A:=
-  match n, l with
-    | O, _ => l
-    | _, [] => []
-    | S n', h::t => (list_drop n' t)
-  end.
-
-CoInductive lazy (X:Type) :=
-| Lazy : X -> lazy X.
-Implicit Arguments Lazy [[X]].
-
-Unset Elimination Schemes.
-
-Inductive lazy_list (X:Type) :=
-| ll_nil: lazy_list X
-| ll_cons: forall (x:X) (l: lazy (lazy_list X)), lazy_list X.
-
-Implicit Arguments ll_nil [[X]].
-Implicit Arguments ll_cons [[X]].
-
-Notation "x ::: ll" := (ll_cons x (Lazy ll)) (at level 60, right associativity).
-
-Notation "〈 〉" := (ll_nil).
-
-Notation "〈 x ; .. ; z 〉" := (ll_cons x (Lazy ( .. (ll_cons z (Lazy ll_nil)) .. ))).
-
-
-Set Elimination Schemes.
-
-Fixpoint lazy_list_rect (A:Type) (P : lazy_list A -> Type) (Hnil: P ll_nil)
-  (Hcons: forall (a: A) ll, P ll -> P (ll_cons a (Lazy ll))) (l: lazy_list A) : P l :=
-  match l as l0 return P l0 with
-    | 〈〉 => Hnil
-    | x ::: l' => (Hcons x l' (lazy_list_rect P Hnil Hcons l'))
-  end.
-
-Implicit Arguments lazy_list_rect [A].
-
-Definition lazy_list_ind (A:Type) (P : lazy_list A -> Prop) (Hnil: P ll_nil)
-  (Hcons: forall (a: A) ll, P ll -> P (ll_cons a (Lazy ll))) (l: lazy_list A) : P l :=
-  lazy_list_rect P Hnil Hcons l.
-
-Fixpoint to_list {X} (ll: lazy_list X) : list X :=
-  match ll with
-    | 〈〉 => []
-    | x ::: l' => x :: to_list l'
-  end.
-
-Fixpoint ll_length {X} (l: lazy_list X) : nat :=
-  match l with
-    | 〈〉 => O
-    | x ::: l' => S (ll_length l')
-  end.
-
-Lemma ll_length_correct: forall {X} (ll: lazy_list X),
-  ll_length ll = length (to_list ll).
-Proof.
-  induction ll; simpl; congruence.
-Qed.
-
-
-Fixpoint ll_nth {X} n (ll: lazy_list X) :=
-  match n, ll with
-    | _ ,〈〉 => None
-    | O, x ::: _ => Some x
-    | S n', _ ::: ll' => ll_nth n' ll'
-  end.
-
-Lemma ll_nth_correct: forall {X} n (ll: lazy_list X),
-  ll_nth n ll = nth_error (to_list ll) n.
-Proof.
-  induction n; simpl; intros; destruct ll as [| x [ll'] ]; simpl; auto.
-Qed.
-
-
-Definition byte_map := nat -> option byte.
-Definition eq_byte_map (bm1 bm2: byte_map) := forall n, bm1 n = bm2 n.
-Notation "bm1 ≡ bm2" := (eq_byte_map bm1 bm2) (at level 70, no associativity).
-
-
-Definition start_map_from (start: nat) (bm: byte_map) : byte_map :=
-  fun n => bm (start + n)%nat.
-
-Lemma start_map_from_0: forall bm, start_map_from 0 bm ≡ bm.
-Proof.
-  intros bm n.
-  unfold start_map_from. simpl. reflexivity.
-Qed.
-
-Lemma start_map_from_right: forall start bm n,
-  (start_map_from start bm n) = bm (n + start)%nat.
-Proof.
-  intros; simpl. unfold start_map_from. f_equal. omega.
-Qed.
-
-Definition update_byte_map (bm: byte_map) (loc:nat) (ob: option byte): byte_map :=
-  fun n =>
-    if eq_nat_dec n loc then ob else bm n.
-
-
-Definition byte_map_from_ll (ll: lazy_list byte) : byte_map:=
-  fun n => ll_nth n ll.
-
-
-
-Inductive is_some {X}: option X -> Prop :=
-| Is_Some: forall x, is_some (Some x).
 
 (* classification of instructions *)
 
@@ -189,66 +72,15 @@ Module Type INSTRUCTION.
     parse_instruction bm = Some (instr, n) -> n <> O.
 
   Parameter classify_instruction: instruction -> instruction_classification register.
-End INSTRUCTION.
 
-
-Module Type INSTRUCTION_SEMANTICS(Import I: INSTRUCTION).
-  (* the first parameter is to indicate that the n first bytes of the memory
-     cannot be written *)
   Parameter instruction_semantics: N -> instruction ->
     state register -> instruction_target_state register -> Prop.
 
-
-  (* an instruction cannot write in the lower code segment *)
-  Parameter sem_no_overwrite: forall code_segment_size instr st1 st2,
-    instruction_semantics code_segment_size instr st1 (Good_state st2) ->
-    forall n', n' < code_segment_size -> st1.(state_mem) n' = st2.(state_mem) n'.
-
-  (* the "good" instructions can get stuck but neverr lead to a "bad state" *)
-
-  Parameter sem_not_invalid_not_bad: forall instr,
-    classify_instruction instr <> Invalid_instruction ->
-    forall code_segment_size st tst,
-      instruction_semantics code_segment_size instr st tst ->
-      is_good_state tst.
+End INSTRUCTION.
 
 
-  Parameter sem_OK_instr_pc: forall bm instr size,
-    parse_instruction bm = Some (instr, size) ->
-    classify_instruction instr = OK_instr ->
-    forall code_segment_size st1 st2,
-    instruction_semantics code_segment_size instr st1 (Good_state st2) ->
-    st2.(state_pc) = st1.(state_pc) + (N_of_nat size).
 
-  Parameter sem_Mask_instr_pc: forall bm instr size,
-    parse_instruction bm = Some (instr, size) ->
-    forall reg w,
-    classify_instruction instr = Mask_instr reg w->
-    forall code_segment_size st1 st2,
-    instruction_semantics code_segment_size instr st1 (Good_state st2) ->
-    st2.(state_pc) = st1.(state_pc) + (N_of_nat size).
-
-  Parameter sem_Direct_jump_pc: forall bm instr size,
-    parse_instruction bm = Some (instr, size) ->
-    forall w,
-    classify_instruction instr = Direct_jump w ->
-    forall code_segment_size st1 st2,
-    instruction_semantics code_segment_size instr st1 (Good_state st2) ->
-    st2.(state_pc) = st1.(state_pc) + (N_of_nat size) \/
-    st2.(state_pc) = word_to_N w.
-
-  Parameter sem_Indirect_jump_pc: forall bm instr size,
-    parse_instruction bm = Some (instr, size) ->
-    forall reg,
-    classify_instruction instr = Indirect_jump reg ->
-    forall code_segment_size st1 st2,
-    instruction_semantics code_segment_size instr st1 (Good_state st2) ->
-    st2.(state_pc) = st1.(state_pc) + (N_of_nat size) \/
-    st2.(state_pc) = word_to_N (st1.(state_regs) reg).
-
-End INSTRUCTION_SEMANTICS.
-
-Fixpoint pow2 (n: nat) :=
+(*Fixpoint pow2 (n: nat) :=
   match n with
     | O => 1
     | S n' => 2 * pow2 n'
@@ -301,7 +133,7 @@ Proof.
    SSCase "S p'".
      right. intros [d H]. simpl in H. destruct (pow2 p'); inv H.
      destruct d; inv H1.
-Qed.
+Qed.*)
 
 Definition dividable_by_32 (n:N) :=
   exists d:N, n = 32 * d.
@@ -336,7 +168,7 @@ Qed.
 
 
 (* Define the semantics of programs, parameterized by those of instruction *)
-Module Prog_Semantics (Import I: INSTRUCTION)(Import IS:INSTRUCTION_SEMANTICS(I)).
+Module Prog_Semantics (Import I: INSTRUCTION).
 
   Inductive target_state :=
     (* a regular state *)
