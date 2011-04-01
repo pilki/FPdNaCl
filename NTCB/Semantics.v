@@ -185,6 +185,9 @@ Module Type INSTRUCTION.
     forall bm', (forall n', (n' < n)%nat -> bm n' = bm' n') ->
       parse_instruction bm' = Some (instr, n).
 
+  Parameter size_instr_not_0: forall bm instr n,
+    parse_instruction bm = Some (instr, n) -> n <> O.
+
   Parameter classify_instruction: instruction -> instruction_classification register.
 End INSTRUCTION.
 

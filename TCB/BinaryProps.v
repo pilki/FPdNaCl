@@ -23,7 +23,7 @@ Qed.
 Lemma word_of_word: forall w,
   to_word (word_to_N w) = w.
 Proof.
-  destruct w as [b1 b2 b3 b4].
+  destruct w as [b4 b3 b2 b1].
   unfold to_word.
   simpl. repeat rewrite fst_byte_of_byte.
   unfold fst_byte, byte_to_N.

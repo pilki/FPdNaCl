@@ -110,7 +110,7 @@ Inductive word := W : byte -> byte -> byte -> byte -> word.
 
 Definition word_to_N w :=
   match w with
-    | W b1 b2 b3 b4 =>
+    | W b4 b3 b2 b1 =>
       let n4 := byte_to_N b4 in
       let n3 := concat_byte n4 b3 in
       let n2 := concat_byte n3 b2 in

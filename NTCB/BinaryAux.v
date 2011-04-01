@@ -133,7 +133,7 @@ Definition to_word n :=
   let (b2, n2):= fst_byte n1 in
   let (b3, n3):= fst_byte n2 in
   let (b4, n4):= fst_byte n3 in
-  W b1 b2 b3 b4.
+  W b4 b3 b2 b1.
 
 Lemma translate_0_by t: translate_N_by t 0 = 0.
 Proof. induction t; auto. Qed.

@@ -20,7 +20,7 @@ OCB_OPTIONS=\
 VPATH=$(DIRS)
 GPATH=$(DIRS)
 
-NTCB=NSet.v Lib.v BinaryAux.v Semantics.v
+NTCB=NSet.v Lib.v BinaryAux.v Semantics.v Coqlibext.v Validator.v
 TCB=BinaryDefs.v BinaryProps.v
 
 EXTRACTION=extraction.v
