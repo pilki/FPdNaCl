@@ -77,7 +77,7 @@ Module ValidatorCode (Import I: INSTRUCTION).
     solve_case teq0 teq3.
     solve_case teq0 teq3.
   Qed.
-
+ 
   Ltac fun_ind_validate_n_byte_with call :=
     functional induction call;
       [ fst_Case_tac "fun_ind_validate_n_byte 1"
@@ -140,7 +140,7 @@ Module ValidatorCode (Import I: INSTRUCTION).
     match validate_ll_list header_size Nempty Nempty ll with
       | None => false
       | Some (valid_addresses, to_be_checked_addresses) =>
-        Nincluded to_be_checked_addresses valid_addresses
+        is_Nincluded to_be_checked_addresses valid_addresses
     end.
 End ValidatorCode.
   

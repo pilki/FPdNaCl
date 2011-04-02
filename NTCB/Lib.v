@@ -263,7 +263,7 @@ Ltac normalize_env_aux :=
   repeat
     match goal with
       | H : True |- _ => clear H
-      | H : (_, _) = (_, _) |- _ => inversion_clear H
+      | H : (_, _) = (_, _) |- _ => inversion H; clear H
       | H : @JMeq ?A ?a ?A ?b |- _ => apply JMeq_eq in H
       | H : @JMeq ?A ?a ?B ?b |- _ =>
         pose proof (type_of_JMeq_eq H);

@@ -18,6 +18,14 @@ Inductive In_PSet: positive -> PSet -> Prop:=
 
 Hint Constructors In_PSet: nset.
 
+Definition Pincluded ps1 ps2 := forall p, In_PSet p ps1 -> In_PSet p ps2.
+
+Lemma Pincluded_trans: forall ps1 ps2 ps3, Pincluded ps1 ps2 -> Pincluded ps2 ps3 ->
+  Pincluded ps1 ps3.
+Proof.
+  unfold Pincluded. intros. eauto.
+Qed.
+
 Definition Pempty := PLeaf false.
 
 Hint Unfold Pempty: nset.
@@ -59,9 +67,6 @@ Proof.
   induction' IN; simpl; auto.
 Qed.
 
-
-
-
 Fixpoint Padd (pos: positive) (tree: PSet) :=
   match pos with
     | xH =>
@@ -80,7 +85,6 @@ Fixpoint Padd (pos: positive) (tree: PSet) :=
         | PNode psO b psI => PNode (Padd pos' psO) b psI
       end
   end.
-
 
 Lemma Pempty_empty: forall pos, ~In_PSet pos Pempty.
 Proof.
@@ -113,6 +117,12 @@ Proof.
   edestruct IHpos2; eauto; subst; eauto with nset.
 Qed.
 
+Lemma Padd_Pincluded: forall pos ps, Pincluded ps (Padd pos ps).
+Proof.
+  unfold Pincluded.
+  intros. apply Padd_before_In. assumption.
+Qed.
+
 Definition imp_bool b1 b2 :=
   match b1, b2 with
     | _, true => true
@@ -121,9 +131,7 @@ Definition imp_bool b1 b2 :=
   end.
 
 
-
-
-Fixpoint Pincluded ps1 ps2 :=
+Fixpoint is_Pincluded ps1 ps2 :=
   match ps1 with
     | PLeaf false => true
     | PLeaf true =>
@@ -134,13 +142,13 @@ Fixpoint Pincluded ps1 ps2 :=
     | PNode psO1 b1 psI1 =>
       match ps2 with
         | PLeaf b2 =>
-          imp_bool b1 b2 && Pincluded psO1 Pempty && Pincluded psI1 Pempty
+          imp_bool b1 b2 && is_Pincluded psO1 Pempty && is_Pincluded psI1 Pempty
         | PNode psO2 b2 psI2 =>
-          imp_bool b1 b2 && Pincluded psO1 psO2 && Pincluded psI1 psI2
+          imp_bool b1 b2 && is_Pincluded psO1 psO2 && is_Pincluded psI1 psI2
       end
   end.
 
-Lemma Pincluded_Pempty: forall ps, Pincluded ps Pempty = true -> forall pos, ~In_PSet pos ps.
+Lemma is_Pincluded_Pempty: forall ps, is_Pincluded ps Pempty = true -> forall pos, ~In_PSet pos ps.
 Proof.
   induction' ps; intros Pincl pos.
   Case "PLeaf".
@@ -157,8 +165,10 @@ Proof.
 Qed.
 
 
-Lemma Pincluded_included: forall ps1 ps2, Pincluded ps1 ps2 = true -> forall pos, In_PSet pos ps1 -> In_PSet pos ps2.
+Lemma is_Pincluded_Pincluded: forall ps1 ps2, is_Pincluded ps1 ps2 = true ->
+  Pincluded ps1 ps2.
 Proof.
+  unfold Pincluded.
   induction' ps1; intros.
   Case "PLeaf".
   inv H0. simpl in H.
@@ -169,10 +179,10 @@ Proof.
   destruct ps2; destruct b; simpl in *; try congruence; auto with nset.
   destruct ps2; match goal with | H: context[imp_bool ?b1 ?b2] |- _ => destruct (imp_bool b1 b2); simpl in H; try congruence;
                 destruct (andb_prop _ _ H) end; eauto with nset.
-  elimtype False. eapply (Pincluded_Pempty ps1_1); eauto.
+  elimtype False. eapply (is_Pincluded_Pempty ps1_1); eauto.
   destruct ps2; match goal with | H: context[imp_bool ?b1 ?b2] |- _ => destruct (imp_bool b1 b2); simpl in H; try congruence;
                 destruct (andb_prop _ _ H) end; eauto with nset.
-  elimtype False. eapply (Pincluded_Pempty ps1_2); eauto.
+  elimtype False. eapply (is_Pincluded_Pempty ps1_2); eauto.
 Qed.
 
 
@@ -185,6 +195,23 @@ Inductive In_NSet: N -> NSet -> Prop :=
 | In_Npos: forall pos b ps, In_PSet pos ps -> In_NSet (Npos pos) (b, ps).
 
 Hint Constructors In_NSet: nset.
+
+Definition Nincluded (ns1 ns2: NSet) := forall n, In_NSet n ns1 -> In_NSet n ns2.
+
+Hint Unfold Nincluded: nset.
+
+Lemma Nincluded_trans: forall ns1 ns2 ns3, Nincluded ns1 ns2 -> Nincluded ns2 ns3 ->
+  Nincluded ns1 ns3.
+Proof.
+  unfold Nincluded. auto.
+Qed.
+
+Lemma Nincluded_refl: forall ns, Nincluded ns ns.
+Proof.
+  unfold Nincluded. auto.
+Qed.
+Hint Resolve Nincluded_trans Nincluded_refl: nset.
+
 
 Definition Nempty: NSet := (false, Pempty).
 
@@ -255,29 +282,42 @@ Proof.
   edestruct Padd_In_or; eauto with nset. subst. auto.
 Qed.
 
-
-
-Fixpoint Nincluded (ns1 ns2: NSet) := imp_bool (fst ns1) (fst ns2) && Pincluded (snd ns1) (snd ns2).
-
-
-Lemma Nincluded_Nempty: forall ns, Nincluded ns Nempty = true -> forall n, ~In_NSet n ns.
+Lemma Nadd_Nincluded: forall n ns, Nincluded ns (Nadd n ns).
 Proof.
-  intros * INCL n IN.
-  destruct ns as (b, ps); destruct n; inv IN; simpl in *.
-  congruence.
-  eapply Pincluded_Pempty; eauto. destruct b; simpl in *; auto.
+  unfold Nincluded.
+  intros. apply Nadd_before_In. assumption.
 Qed.
 
 
-Lemma Nincluded_included: forall ns1 ns2, Nincluded ns1 ns2 = true -> forall n, In_NSet n ns1 -> In_NSet n ns2.
+
+Hint Resolve Nadd_In Nadd_before_In Nadd_In_or Nadd_Nincluded: nset.
+
+Definition is_Nincluded (ns1 ns2: NSet) :=
+  imp_bool (fst ns1) (fst ns2) && is_Pincluded (snd ns1) (snd ns2).
+
+
+Lemma is_Nincluded_Nempty: forall ns, is_Nincluded ns Nempty = true ->
+  forall n, ~In_NSet n ns.
 Proof.
+  unfold is_Nincluded.
+  intros * INCL n IN.
+  destruct ns as (b, ps); destruct n; inv IN; simpl in *.
+  inv INCL.
+  eapply is_Pincluded_Pempty; eauto. destruct b; simpl in *; auto.
+Qed.
+
+
+Lemma is_Nincluded_included: forall ns1 ns2, is_Nincluded ns1 ns2 = true ->
+  Nincluded ns1 ns2.
+Proof.
+  unfold Nincluded. unfold is_Nincluded.
   intros (b1, ps1) (b2, ps2) INC [|pos] IN.
 
   simpl in *. inv IN. destruct b2; auto with nset; simpl in *; congruence.
 
   simpl in *. destruct (andb_prop _ _ INC). inv IN.
-  constructor. eauto using Pincluded_included.
-
+  constructor.
+  pose proof is_Pincluded_Pincluded. unfold Pincluded in *. eauto.
 Qed.
 
 
