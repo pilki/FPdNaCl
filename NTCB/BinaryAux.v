@@ -106,7 +106,7 @@ Lemma concat_byte_aux_correct: forall n b,
 Proof.
   unfold concat_byte, concat_byte_aux.
   destruct b as (hb2, hb1).
-  unfold byte_to_N, concat_half_byte. simpl.
+  unfold N_of_byte, concat_half_byte. simpl.
   repeat match goal with
     | |- context[translate_N_by_four ?n] =>
       rewrite (translate_N_by_four_correct n)
@@ -120,8 +120,8 @@ Proof.
   Case "0".
   simpl. reflexivity.
   Case "Npos pos".
-  remember (half_byte_to_N hb1) as nhb1. clear Heqnhb1.
-  remember (half_byte_to_N hb2) as nhb2. clear Heqnhb2.
+  remember (N_of_half_byte hb1) as nhb1. clear Heqnhb1.
+  remember (N_of_half_byte hb2) as nhb2. clear Heqnhb2.
   rewrite Nplus_assoc. f_equal.
   rewrite <- (translate_N_plus 4 4).
   rewrite translate_N_assoc. reflexivity.
@@ -150,7 +150,7 @@ Proof.
 Qed.
 
 Lemma translate_P_and: forall t p1 p2, (exists p1', p1 = translate_P_by t p1') ->
-  forall p, list_to_P (list_and (P_to_list p1) (P_to_list p2)) = Some p ->
+  forall p, P_of_bool_list (list_and (bool_list_of_P p1) (bool_list_of_P p2)) = Some p ->
   exists p', p = translate_P_by t p'.
 Proof.
   induction' t as [|t]; intros * EXISTS * SOME.
@@ -165,7 +165,7 @@ Proof.
     simpl in SOME.
 
 
-    destruct (P_to_list p2) as [] _eqn. inv SOME.
+    destruct (bool_list_of_P p2) as [] _eqn. inv SOME.
     simpl in *.
     match type of SOME with
       | match ?EXP with | Some _ => _ | None => _ end = _ =>
@@ -178,7 +178,7 @@ Proof.
     SCase "xO p2".
       edestruct IHt; eauto. exists x. rewrite translate_P_tilde_0. congruence.
     SCase "1%positive".
-      destruct (P_to_list (translate_P_by t p1')); inv Heqo.
+      destruct (bool_list_of_P (translate_P_by t p1')); inv Heqo.
 Qed.
 
 
@@ -190,13 +190,13 @@ Proof.
     try solve [exists 0; rewrite translate_0_by; reflexivity].
   Case "Npos pos1"; SCase "0".
     exists 0. simpl.
-    destruct (P_to_list pos1); reflexivity.
+    destruct (bool_list_of_P pos1); reflexivity.
   Case "Npos pos1"; SCase "Npos pos2".
 
   destruct H. destruct x; inversion H.
 
-  unfold list_to_N.
-  destruct (list_to_P (list_and (P_to_list (translate_P_by t p)) (P_to_list pos2))) as [] _eqn.
+  unfold N_of_bool_list.
+  destruct (P_of_bool_list (list_and (bool_list_of_P (translate_P_by t p)) (bool_list_of_P pos2))) as [] _eqn.
     edestruct translate_P_and.
     exists p. eassumption.
     subst. eassumption.

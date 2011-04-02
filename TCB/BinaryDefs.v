@@ -30,7 +30,7 @@ Proof.
   unfold eq_dec. decide equality.
 Qed.
 
-Definition half_byte_to_N hb : N:=
+Definition N_of_half_byte hb : N:=
   match hb with
     | HB0 => 0
     | HB1 => 1
@@ -88,7 +88,7 @@ Proof.
 Qed.
 
 
-Definition concat_half_byte n hb := (translate_N_by_four n) + (half_byte_to_N hb).
+Definition concat_half_byte n hb := (translate_N_by_four n) + (N_of_half_byte hb).
 
 
 
@@ -103,14 +103,14 @@ Proof.
   unfold eq_dec; decide equality; apply half_byte_eq_dec.
 Qed.
 
-Definition byte_to_N (b: byte) : N:=
-  concat_half_byte (half_byte_to_N (fst b)) (snd b).
+Definition N_of_byte (b: byte) : N:=
+  concat_half_byte (N_of_half_byte (fst b)) (snd b).
 
 Definition byte0 : byte := (HB0, HB0).
 
 
 Definition concat_byte n (b: byte) :=
-  translate_N_by_eight n + byte_to_N b.
+  translate_N_by_eight n + N_of_byte b.
 
 
 (* a word is four byte, little endian *)
@@ -121,10 +121,10 @@ Proof.
   unfold eq_dec; decide equality; apply byte_eq_dec.
 Qed.
 
-Definition word_to_N w :=
+Definition N_of_word w :=
   match w with
     | W b4 b3 b2 b1 =>
-      let n4 := byte_to_N b4 in
+      let n4 := N_of_byte b4 in
       let n3 := concat_byte n4 b3 in
       let n2 := concat_byte n3 b2 in
       concat_byte n2 b1
@@ -133,50 +133,50 @@ Definition word_to_N w :=
 
 (* logical and *)
 
-Fixpoint P_to_list p : list bool :=
+Fixpoint bool_list_of_P p : list bool :=
   match p with
     | xH => true :: nil
-    | xO p' => false :: P_to_list p'
-    | xI p' => true :: P_to_list p'
+    | xO p' => false :: bool_list_of_P p'
+    | xI p' => true :: bool_list_of_P p'
   end.
 
-Fixpoint list_to_P l : option positive :=
+Fixpoint P_of_bool_list l : option positive :=
   match l with
     | nil => None
     | false :: l' =>
-      match list_to_P l' with
+      match P_of_bool_list l' with
         | None => None
         | Some p => Some (xO p)
       end
     | true :: l' =>
-      match list_to_P l' with
+      match P_of_bool_list l' with
         | None => Some xH
         | Some p => Some (xI p)
       end
   end.
 
-Lemma P_to_list_to_P: forall p, list_to_P (P_to_list p) = Some p.
+Lemma P_of_bool_list_of_P: forall p, P_of_bool_list (bool_list_of_P p) = Some p.
 Proof.
   induction' p; auto; simpl; rewrite IHp; congruence.
 Qed.
 
-Definition N_to_list n :=
+Definition bool_list_of_N n :=
   match n with
     | N0 => nil
-    | Npos pos => P_to_list pos
+    | Npos pos => bool_list_of_P pos
   end.
 
-Definition list_to_N l :=
-  match list_to_P l with
+Definition N_of_bool_list l :=
+  match P_of_bool_list l with
     | None => N0
     | Some pos => Npos pos
   end.
 
-Lemma N_to_list_to_N: forall n, list_to_N (N_to_list n) = n.
+Lemma N_of_bool_list_of_N: forall n, N_of_bool_list (bool_list_of_N n) = n.
 Proof.
-  destruct n; unfold N_to_list, list_to_N; simpl.
+  destruct n; unfold bool_list_of_N, N_of_bool_list; simpl.
   reflexivity.
-  rewrite P_to_list_to_P. reflexivity.
+  rewrite P_of_bool_list_of_P. reflexivity.
 Qed.
 
 Fixpoint list_and l1 l2 : list bool :=
@@ -187,7 +187,7 @@ Fixpoint list_and l1 l2 : list bool :=
   end.
 
 Definition N_and n1 n2 :=
-  list_to_N (list_and (N_to_list n1) (N_to_list n2)).
+  N_of_bool_list (list_and (bool_list_of_N n1) (bool_list_of_N n2)).
 
 Lemma list_and_same: forall l, list_and l l = l.
 Proof.
@@ -199,6 +199,6 @@ Qed.
 Lemma N_and_same: forall n, N_and n n = n.
 Proof.
   intros.
-  unfold N_and. rewrite list_and_same. apply N_to_list_to_N.
+  unfold N_and. rewrite list_and_same. apply N_of_bool_list_of_N.
 Qed.
 

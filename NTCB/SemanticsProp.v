@@ -43,7 +43,7 @@ Module Type INSTRUCTION_SEMANTICS_PROP(Import I: INSTRUCTION).
     forall code_segment_size st1 st2,
     instruction_semantics code_segment_size instr st1 (Good_state st2) ->
     st2.(state_pc) = st1.(state_pc) + (N_of_nat size) \/
-    st2.(state_pc) = word_to_N w.
+    st2.(state_pc) = N_of_word w.
 
   Parameter sem_Indirect_jump_pc: forall bm instr size,
     parse_instruction bm = Some (instr, size) ->
@@ -52,6 +52,6 @@ Module Type INSTRUCTION_SEMANTICS_PROP(Import I: INSTRUCTION).
     forall code_segment_size st1 st2,
     instruction_semantics code_segment_size instr st1 (Good_state st2) ->
     st2.(state_pc) = st1.(state_pc) + (N_of_nat size) \/
-    st2.(state_pc) = word_to_N (st1.(state_regs) reg).
+    st2.(state_pc) = N_of_word (st1.(state_regs) reg).
 
 End INSTRUCTION_SEMANTICS_PROP.

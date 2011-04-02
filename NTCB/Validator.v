@@ -40,7 +40,7 @@ Module ValidatorCode (Import I: INSTRUCTION).
                 addr' (Nadd addr valid_addresses) to_be_checked_addresses ll'
             end
           | Direct_jump w =>
-            let dest_addr := word_to_N w in
+            let dest_addr := N_of_word w in
             if dividable_by_32_dec dest_addr then
               validate_n_byte n' None
                 addr' (Nadd addr valid_addresses) to_be_checked_addresses ll'
