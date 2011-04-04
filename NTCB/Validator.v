@@ -25,7 +25,7 @@ Module ValidatorCode (Import I: INSTRUCTION).
         do (instr, size_instr) <- parse_instruction (byte_map_from_ll ll);
         do ll' <- ll_safe_drop size_instr ll;
         do n' <- safe_minus n size_instr;
-        let addr' := N_of_nat n' in
+        let addr' := addr + (N_of_nat size_instr) in
         match classify_instruction instr with
           | OK_instr =>
             validate_n_byte n' None addr'
