@@ -16,9 +16,8 @@ Module Type INSTRUCTION_SEMANTICS_PROP(Import I: INSTRUCTION).
 
   Parameter sem_not_invalid_not_bad: forall instr,
     classify_instruction instr <> Invalid_instruction ->
-    forall code_segment_size st tst,
-      instruction_semantics code_segment_size instr st tst ->
-      is_good_state tst.
+    forall code_segment_size st,
+      ~ instruction_semantics code_segment_size instr st Bad_state.
 
 
   Parameter sem_OK_instr_pc: forall bm instr size,
