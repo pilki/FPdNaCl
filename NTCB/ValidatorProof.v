@@ -194,6 +194,77 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
           exists xaddr'; eauto.
   Qed.
 
+
+Inductive ok_addr next_addr valid_addresses
+  to_be_checked_addresses addr : Prop :=
+| OA_Valid:
+  In_NSet addr valid_addresses ->
+  ok_addr next_addr valid_addresses to_be_checked_addresses addr
+| OK_checked:
+  In_NSet addr to_be_checked_addresses ->
+  ok_addr next_addr valid_addresses to_be_checked_addresses addr
+| OK_next: addr = next_addr ->
+  ok_addr next_addr valid_addresses to_be_checked_addresses addr
+| OK_div:
+  dividable_by_32 addr ->
+  ok_addr next_addr valid_addresses to_be_checked_addresses addr.
+  
+
+Inductive correct_addr mem next_addr valid_addresses
+  to_be_checked_addresses addr : Prop :=
+  | CA_intro:
+    forall instr size_instr
+    (SMALLER: addr + (N_of_nat size_instr) <= next_addr)
+    (READ_FROM_MEM: read_instr_from_memory mem addr = Some (instr, size_instr))
+    (NOT_INV: classify_instruction instr <> Invalid_instruction)
+    (NOT_IND: forall reg, classify_instruction instr <> Indirect_jump reg)
+    (CLASSIFY_OK: classify_instruction instr = OK_instr ->
+      ok_addr next_addr valid_addresses to_be_checked_addresses
+        (addr + N_of_nat size_instr))
+    (CLASSIFY_DIRECT: forall w,
+      classify_instruction instr = Direct_jump w ->
+      ok_addr next_addr valid_addresses to_be_checked_addresses
+        (addr + N_of_nat size_instr) /\
+      ok_addr next_addr valid_addresses to_be_checked_addresses
+        (N_of_word w))
+    (CLASSIFY_MASK: forall reg w,
+      classify_instruction instr = Mask_instr reg w ->
+      ok_addr next_addr valid_addresses to_be_checked_addresses
+        (addr + N_of_nat size_instr) \/
+      (exists instr', exists size_instr',
+        read_instr_from_memory mem (addr + (N_of_nat size_instr)) =
+          Some (instr', size_instr') /\
+        addr + (N_of_nat size_instr) + (N_of_nat size_instr') <= next_addr /\
+        classify_instruction instr' = Indirect_jump reg)),
+    correct_addr mem next_addr valid_addresses
+      to_be_checked_addresses addr.
+      
+Lemma correct_addr_same_code mem1 mem2
+  next_addr valid_addresses to_be_checked_addresses addr:
+  same_code next_addr mem1 mem2 ->
+  correct_addr mem1 next_addr valid_addresses to_be_checked_addresses addr ->
+  correct_addr mem2 next_addr valid_addresses to_be_checked_addresses addr.
+Proof.
+  intros SAME CORRECT.
+  inv CORRECT.
+  eapply' CA_intro; eauto.
+  Case "READ_FROM_MEM".
+    clear - SAME READ_FROM_MEM SMALLER.
+    unfold same_code, read_instr_from_memory in *.
+    eapply parse_instruction_only_read; eauto.
+    intros. simpl. apply SAME. omega'.
+  Case "CLASSIFY_MASK".
+    intros * OK.
+    specialize (CLASSIFY_MASK reg w OK).
+    destruct CLASSIFY_MASK as [|[instr' [size_instr' [?[? ?]]]]]; eauto.
+    right. exists instr'; exists size_instr'.
+    repeat split; eauto.
+    unfold same_code, read_instr_from_memory in *.
+    eapply parse_instruction_only_read; eauto.
+    intros. simpl. apply SAME. omega'.
+Qed.
+
+
   Definition correct_state_1 valid_addresses to_be_checked_addresses next_address (st: state register) :=
     (  dividable_by_32 st.(state_pc)
     \/ In_NSet st.(state_pc) valid_addresses
