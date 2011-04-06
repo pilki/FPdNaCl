@@ -48,7 +48,8 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
     valid_addresses' to_be_checked_addresses' ll',
     validate_n_byte n addr valid_addresses to_be_checked_addresses ll =
     Some (valid_addresses', to_be_checked_addresses', ll') ->
-    Nincluded valid_addresses valid_addresses'.
+    forall addr', In_NSet addr' valid_addresses ->
+      In_NSet addr' valid_addresses'.
   Proof.
     intros * VALIDATE.
     fun_ind_validate_n_byte; clean; eauto with nset.
@@ -60,7 +61,8 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
     valid_addresses' to_be_checked_addresses' ll',
     validate_n_byte n addr valid_addresses to_be_checked_addresses ll =
     Some (valid_addresses', to_be_checked_addresses', ll') ->
-    Nincluded to_be_checked_addresses to_be_checked_addresses'.
+    forall addr', In_NSet addr' to_be_checked_addresses ->
+      In_NSet addr' to_be_checked_addresses'.
   Proof.
     intros * VALIDATE.
     fun_ind_validate_n_byte; clean; eauto with nset.
@@ -216,7 +218,8 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
   | OK_div:
     dividable_by_32 addr ->
     ok_addr next_addr valid_addresses to_be_checked_addresses addr.
-  
+
+  Local Hint Constructors ok_addr.
 
   Inductive correct_addr mem next_addr valid_addresses
     to_be_checked_addresses addr : Prop :=
@@ -272,58 +275,42 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
       intros. simpl. apply SAME. omega'.
   Qed.
 
-
-  Definition correct_state_1 valid_addresses to_be_checked_addresses next_address (st: state register) :=
-    (  dividable_by_32 st.(state_pc)
-    \/ In_NSet st.(state_pc) valid_addresses
-    \/ In_NSet st.(state_pc) to_be_checked_addresses
-    \/ st.(state_pc) = next_address).
-
-  Definition one_step_correct code_size
-    valid_addresses to_be_checked_addresses next_address st1 :=
-    (~step header_size code_size st1 DANGER_STATE) /\
-    forall st2, step header_size code_size st1 (Normal_state st2) ->
-      correct_state_1 valid_addresses to_be_checked_addresses next_address st2.
-
-
-  Definition two_steps_correct code_size
-    valid_addresses to_be_checked_addresses next_address st1 :=
-    (~step header_size code_size st1 DANGER_STATE) /\
-    forall st2, step header_size code_size st1 (Normal_state st2) ->
-    ( correct_state_1 valid_addresses to_be_checked_addresses next_address st2 \/
-      one_step_correct code_size valid_addresses
-         to_be_checked_addresses next_address st2).
-
-  Lemma one_step_correct_trans:
-    forall code_size valid_addresses
-      to_be_checked_addresses to_be_checked_addresses' addr addr' st,
-      Nincluded to_be_checked_addresses to_be_checked_addresses' ->
-      one_step_correct code_size valid_addresses
-        to_be_checked_addresses addr st ->
-      one_step_correct code_size (Nadd addr valid_addresses)
-        to_be_checked_addresses' addr' st.
+  Lemma ok_addr_bigger next_addr next_addr' valid_addresses
+    valid_addresses' to_be_checked_addresses to_be_checked_addresses' addr:
+    next_addr <= next_addr' ->
+    Nincluded to_be_checked_addresses to_be_checked_addresses' ->
+    Nincluded valid_addresses valid_addresses' ->
+    In_NSet next_addr valid_addresses' ->
+    ok_addr next_addr valid_addresses to_be_checked_addresses addr ->
+    ok_addr next_addr' valid_addresses' to_be_checked_addresses' addr.
   Proof.
-    unfold one_step_correct, correct_state_1, Nincluded.
-    intuition eauto.
-    edestruct H2 as [ | [ | [|]]];  eauto with nset.
-    subst. eauto with nset.
+    intros. inv H3; eauto.
   Qed.
 
-  Hint Resolve one_step_correct_trans.
+  Local Hint Resolve ok_addr_bigger.
 
-  Lemma two_steps_correct_trans:
-    forall code_size valid_addresses
-      to_be_checked_addresses to_be_checked_addresses' addr addr' st,
-      Nincluded to_be_checked_addresses to_be_checked_addresses' ->
-      two_steps_correct code_size valid_addresses
-        to_be_checked_addresses addr st ->
-      two_steps_correct code_size (Nadd addr valid_addresses)
-        to_be_checked_addresses' addr' st.
+  Lemma correct_addr_bigger mem next_addr next_addr' valid_addresses
+    valid_addresses' to_be_checked_addresses to_be_checked_addresses' addr:
+    next_addr <= next_addr' ->
+    Nincluded to_be_checked_addresses to_be_checked_addresses' ->
+    Nincluded valid_addresses valid_addresses' ->
+    In_NSet next_addr valid_addresses' ->
+    correct_addr mem next_addr valid_addresses to_be_checked_addresses addr ->
+    correct_addr mem next_addr' valid_addresses' to_be_checked_addresses' addr.
   Proof.
-    unfold two_steps_correct, Nincluded, correct_state_1.
-    intuition eauto.
-    edestruct H2 as [[|[|[|]]]|]; eauto 6 with nset.
-    subst. eauto with nset.
+    intros INF INCL_TBC INCL_VAL IN CORRECT.
+    inv CORRECT.
+    eapply' CA_intro; eauto.
+    Case "SMALLER".
+      omega'.
+    Case "CLASSIFY_DIRECT".
+      intros. specialize (CLASSIFY_DIRECT w H).
+      destruct CLASSIFY_DIRECT. split; eauto.
+    Case "CLASSIFY_MASK".
+      intros. specialize (CLASSIFY_MASK reg w H).
+      decompose [and or ex] CLASSIFY_MASK; eauto.
+      right. eexists; eexists; intuition eauto.
+      omega'. omega'.
   Qed.
 
 
@@ -359,13 +346,43 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
 
   Local Hint Resolve memory_compat_addr_ll_drop.
 
-(*  Lemma parse_instr_impl_read_instr:
-    forall ll instr size_instr
-  parse_instruction (byte_map_from_ll ll) = Some (instr, size_instr) ->
-  memory_compat_addr_ll addr ll mem ->
-  same_code (header_size + code_size) mem st.(state_mem) ->
-  in_code header_size code_size st ->
-  read_instr_from_memory st.(state_mem) st.(state_pc) = Some instr. *)
+  (* LIB *)
+  Require Import ZArith_dec.
+  Lemma N_le_dec: forall n1 n2: N, {n1 <= n2} + {n2 < n1}.
+  Proof.
+    intros.
+    destruct (Z_le_dec (Z_of_N n1) (Z_of_N n2)).
+    left. omega'. right; omega'.
+  Qed.
+
+  Lemma N_lt_dec: forall n1 n2: N, {n1 < n2} + {n2 <= n1}.
+  Proof.
+    intros.
+    destruct (Z_lt_dec (Z_of_N n1) (Z_of_N n2)).
+    left. omega'. right; omega'.
+  Qed.
+
+
+  Lemma parse_instr_impl_read_instr:
+    forall ll instr size_instr addr mem,
+      parse_instruction (byte_map_from_ll ll) = Some (instr, size_instr) ->
+      memory_compat_addr_ll addr ll mem ->
+      read_instr_from_memory mem addr = Some (instr, size_instr).
+  Proof.
+    unfold read_instr_from_memory, memory_compat_addr_ll.
+    intros.
+    eapply parse_instruction_only_read; eauto.
+    intros.
+    unfold byte_map_from_ll. rewrite Nplus_comm. eapply H0.
+    assert (size_instr <= ll_length ll)%nat; try omega.
+    destruct (le_lt_dec size_instr (ll_length ll)); auto.
+    pose proof (parse_instruction_do_read H l).
+    unfold byte_map_from_ll in H2.
+    elimtype False. revert H2. clear.
+    induction ll as [|? []]; simpl; eauto.
+  Qed.
+    
+  
 
   Ltac clean_safe_minus :=
     repeat match goal with
@@ -386,6 +403,184 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
           | |- context[ ?x + N_of_nat 0] =>
             replace (x + N_of_nat 0) with x by omega'
         end.
+
+  Definition NSet_smaller nset addr :=
+    forall addr', In_NSet addr' nset -> addr' < addr.
+
+  Lemma NSet_smaller_add nset addr n:
+    n <> 0 -> NSet_smaller nset addr ->
+    NSet_smaller (Nadd addr nset) (addr + n).
+  Proof.
+    unfold NSet_smaller; intros.
+    destruct (Nadd_In_or _ _ _ H1).
+    Case "=".
+      subst. omega'.
+    Case "In".
+      specialize (H0 _ H2). omega'.
+  Qed.
+
+  Lemma NSet_smaller_plus nset addr n:
+    n <> 0 -> NSet_smaller nset addr ->
+    NSet_smaller nset (addr + n).
+  Proof.
+    unfold NSet_smaller; intros.
+    specialize (H0 _ H1). omega'.
+  Qed.
+  
+
+
+  Lemma size_instr_not_0_N: forall bm instr n,
+    parse_instruction bm = Some (instr, n) -> N_of_nat n <> 0.
+  Proof.
+    intros.
+    pose proof (size_instr_not_0 H). zify. auto.
+  Qed.
+
+  Local Hint Unfold NSet_smaller.
+  Local Hint Resolve NSet_smaller_add size_instr_not_0_N NSet_smaller_plus.
+
+  Lemma In_NSet_dec: forall n nset, {In_NSet n nset} + {~In_NSet n nset}.
+  Proof.
+    intros.
+    destruct (is_Nin n nset) as [] _eqn.
+    left. apply is_Nin_NIn; auto.
+    right. intro. apply NIn_is_Nin in H. congruence.
+  Qed.
+
+  Lemma validate_n_byte_add_valid_addresses_after n init_addr valid_addresses
+    to_be_checked_addresses ll valid_addresses' to_be_checked_addresses' ll':
+    validate_n_byte n init_addr valid_addresses to_be_checked_addresses ll
+      = Some (valid_addresses', to_be_checked_addresses', ll') ->
+    NSet_smaller valid_addresses init_addr ->
+    forall addr,
+      In_NSet addr valid_addresses' ->
+      (addr < init_addr /\ In_NSet addr valid_addresses) \/
+      addr >= init_addr.
+  Proof.
+    fun_ind_validate_n_byte; intros; clean; eauto;
+    try match type of IHo with
+          | ?X -> ?Y -> _ =>
+            assert X as HX; auto;
+            assert Y as HY; eauto;
+            specialize (IHo HX HY _ H1);
+            clear HX HY
+          end;
+    try solve [
+    destruct (N_eq_dec addr0 addr);
+      [subst; right; omega'|];
+    destruct IHo as [[INF IN]| SUP];
+      [destruct (Nadd_In_or _ _ _ IN); [contradiction| eauto]| right; omega'];
+      right; omega'].
+
+    Case "fun_ind_validate_n_byte 3".
+      unfold NSet_smaller in *.
+      destruct (Nadd_In_or _ _ _ H1); subst; eauto.
+      right; omega'.
+   Qed.
+
+
+
+  Lemma HELPER1 n size init_addr valid_addresses
+    to_be_checked_addresses ll valid_addresses' to_be_checked_addresses' ll':
+    validate_n_byte n (init_addr + size) (Nadd init_addr valid_addresses)
+      to_be_checked_addresses ll = Some (valid_addresses', to_be_checked_addresses', ll') ->
+    size <> 0 ->
+    NSet_smaller valid_addresses init_addr ->
+    forall addr, addr >= init_addr -> init_addr <> addr ->
+      In_NSet addr valid_addresses' ->
+      addr >= init_addr + size.
+  Proof.
+    intros.
+    edestruct validate_n_byte_add_valid_addresses_after; eauto.
+    elimtype False.
+    destruct H5. unfold NSet_smaller in *.
+    destruct (Nadd_In_or _ _ _ H6); subst; eauto. specialize (H1 _ H7).
+    omega'.
+  Qed.
+
+  Lemma validate_n_byte_ok_addr n init_addr valid_addresses to_be_checked_addresses ll
+    valid_addresses' to_be_checked_addresses' ll':
+    validate_n_byte n init_addr valid_addresses to_be_checked_addresses ll
+      = Some (valid_addresses', to_be_checked_addresses', ll') ->
+    ok_addr (init_addr + N_of_nat n) valid_addresses'
+      to_be_checked_addresses' init_addr.
+  Proof.
+    fun_ind_validate_n_byte; intros; clean0; eauto;
+      try solve [apply OA_Valid;
+        eapply validate_n_byte_increase_valid_addresses; eauto with nset].
+    Case "fun_ind_validate_n_byte 3".
+      apply OA_Valid. eauto with nset.
+  Qed.
+  Local Hint Resolve validate_n_byte_ok_addr.
+    
+
+  Local Hint Resolve HELPER1 parse_instr_impl_read_instr.
+
+  Lemma validate_n_byte_correct_addr n init_addr valid_addresses to_be_checked_addresses ll
+    valid_addresses' to_be_checked_addresses' ll':
+    validate_n_byte n init_addr valid_addresses to_be_checked_addresses ll
+      = Some (valid_addresses', to_be_checked_addresses', ll') ->
+    NSet_smaller valid_addresses init_addr ->
+    forall mem, memory_compat_addr_ll init_addr ll mem ->
+    forall addr, addr >= init_addr -> In_NSet addr valid_addresses' ->
+      correct_addr mem (init_addr + N_of_nat n) valid_addresses'
+        to_be_checked_addresses' addr.
+  Proof.
+    Ltac clean_classify :=
+        match goal with
+          | H : classify_instruction ?instr = _ |- _ =>
+            match goal with
+              | H' : classify_instruction instr = _ |- _ =>
+                match H with
+                  | H' => fail 1
+                  | _ => rewrite H' in H; inv H
+                end
+            end
+        end.
+
+    fun_ind_validate_n_byte; intros; clean; eauto;
+    try
+      ( pose proof (safe_minus_correct _ _ e3) as SIZE; subst;
+      rewrite plus_N_of_nat in *;
+      destruct (N_eq_dec addr addr0);
+        [ SCase " = "; subst|
+          solve [eapply IHo; eauto]];
+        solve [
+        eapply' CA_intro; eauto; instantiate; try (try red; intros; congruence);
+          [rewrite N_of_plus; omega'|
+            intros; clean_classify; rewrite <- plus_N_of_nat; eauto]]).
+    Case "fun_ind_validate_n_byte 1".
+      specialize (H0 _ H3). contradiction.
+    Case "fun_ind_validate_n_byte 3".
+    admit. admit.
+
+    Case "fun_ind_validate_n_byte 12".
+      Focus 1.
+      apply is_Nin_NIn in e6. 
+      pose proof (safe_minus_correct _ _ e3) as SIZE; subst;
+      rewrite plus_N_of_nat in *;
+      destruct (N_eq_dec addr addr0).
+      SCase "=".
+        subst.
+        eapply' CA_intro; eauto; instantiate; try (try red; intros; congruence).
+          rewrite N_of_plus; omega'.
+          intros; clean_classify; rewrite <- plus_N_of_nat; eauto.
+          split; eauto with nset.
+      solve [eapply IHo; eauto].
+
+    Case "fun_ind_validate_n_byte 13".
+      pose proof (safe_minus_correct _ _ e3) as SIZE; subst;
+      rewrite plus_N_of_nat in *;
+      destruct (N_eq_dec addr addr0).
+      SCase "=".
+        subst.
+        eapply' CA_intro; eauto; instantiate; try (try red; intros; congruence).
+          rewrite N_of_plus; omega'.
+          intros; clean_classify; rewrite <- plus_N_of_nat; eauto.
+          split; eauto with nset.
+       SCase "<>".
+       eapply IHo; eauto.
+  Admitted.
 
   Lemma validate_n_byte_two_steps: forall code_size (n: nat) (addr: N)
     (valid_addresses to_be_checked_addresses: NSet) (ll: lazy_list byte)
@@ -504,21 +699,6 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
     danger_in_n_steps code_size st' n -> danger_in_n_steps code_size st (S n).
 
 
-  (* LIB *)
-  Require Import ZArith_dec.
-  Lemma N_le_dec: forall n1 n2: N, {n1 <= n2} + {n2 < n1}.
-  Proof.
-    intros.
-    destruct (Z_le_dec (Z_of_N n1) (Z_of_N n2)).
-    left. omega'. right; omega'.
-  Qed.
-
-  Lemma N_lt_dec: forall n1 n2: N, {n1 < n2} + {n2 <= n1}.
-  Proof.
-    intros.
-    destruct (Z_lt_dec (Z_of_N n1) (Z_of_N n2)).
-    left. omega'. right; omega'.
-  Qed.
 
 
   Definition correct_state_2 code_size valid_addresses (st: state register) :=
