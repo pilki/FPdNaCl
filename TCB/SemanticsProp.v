@@ -35,6 +35,15 @@ Module Type INSTRUCTION_SEMANTICS_PROP(Import I: INSTRUCTION).
     instruction_semantics code_segment_size instr st1 (Good_state st2) ->
     st2.(state_pc) = st1.(state_pc) + (N_of_nat size).
 
+  Parameter sem_Mask_instr_reg: forall bm instr size,
+    parse_instruction bm = Some (instr, size) ->
+    forall reg w,
+    classify_instruction instr = Mask_instr reg w->
+    forall code_segment_size st1 st2,
+    instruction_semantics code_segment_size instr st1 (Good_state st2) ->
+    st2.(state_regs) reg = word_and w (st1.(state_regs) reg).
+
+
   Parameter sem_Direct_jump_pc: forall bm instr size,
     parse_instruction bm = Some (instr, size) ->
     forall w,

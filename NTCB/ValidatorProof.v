@@ -245,9 +245,12 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
       ok_addr next_addr valid_addresses to_be_checked_addresses
         (addr + N_of_nat size_instr) \/
       (exists instr', exists size_instr',
+        w = proper_mask /\
         read_instr_from_memory mem (addr + (N_of_nat size_instr)) =
           Some (instr', size_instr') /\
-        addr + (N_of_nat size_instr) + (N_of_nat size_instr') <= next_addr /\
+        addr + (N_of_nat size_instr) + (N_of_nat size_instr') <= next_addr/\
+        ok_addr next_addr valid_addresses to_be_checked_addresses
+          (addr + (N_of_nat size_instr) + (N_of_nat size_instr')) /\
         classify_instruction instr' = Indirect_jump reg)),
     correct_addr mem next_addr valid_addresses
       to_be_checked_addresses addr.
@@ -269,7 +272,8 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
     Case "CLASSIFY_MASK".
       intros * OK.
       specialize (CLASSIFY_MASK reg w OK).
-      destruct CLASSIFY_MASK as [|[instr' [size_instr' [?[? ?]]]]]; eauto.
+      destruct CLASSIFY_MASK as [|[instr' [size_instr' ?]]]; eauto.
+      decompose [and] H.
       right. exists instr'; exists size_instr'.
       repeat split; eauto.
       unfold same_code, read_instr_from_memory in *.
@@ -730,7 +734,7 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
         S3Case "CLASSIFY_MASK".
           edestruct CLASSIFY_MASK as [|[instr'[size_instr'[?[]]]]]; eauto.
           right. exists instr'; exists size_instr'. intuition (try omega').
-          
+          eauto.
 
       SCase "right".
       eapply IHo; eauto.
@@ -824,6 +828,33 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
     destruct (N_lt_dec n n2); auto.
   Qed.
 
+
+  Lemma dividable_by_32_translate_by_5: forall n,
+    dividable_by_32 n -> exists n1, n = translate_N_by 5 n1.
+  Proof.
+    intros n [div MULT].
+    exists div.
+    destruct n; auto.
+  Qed.
+
+  Lemma translate_by_5_dividable_by_32: forall n,
+    (exists n1, n = translate_N_by 5 n1 )-> dividable_by_32 n.
+  Proof.
+    intros n [div MULT].
+    exists div.
+    destruct n; auto.
+  Qed.
+
+  Lemma dividable_by_32_and: forall n1 n2, dividable_by_32 n1 ->
+    dividable_by_32 (N_and n1 n2).
+  Proof.
+    intros.
+    apply dividable_by_32_translate_by_5 in H.
+    apply translate_by_5_dividable_by_32.
+    apply translate_and. auto.
+  Qed.
+
+
   Lemma memory_compat_same_code header_size ll mem1 mem2:
     memory_compat_addr_ll header_size ll mem1 ->
     same_code (header_size + N_of_nat (ll_length ll)) mem1 mem2 ->
@@ -840,7 +871,61 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
   Lemma le_sym_2: forall n1 n2, n1 >= n2 -> n2 <= n1. intros; omega'. Qed.
   Local Hint Resolve le_sym_2 le_sym_1.
 
+    Ltac solve_and_proper :=
+      repeat match goal with
+               | |-
+                 context [match ?EXPR with pair  _ _ => _ end] =>
+                 destruct EXPR
+             end;
+      simpl;
+      match goal with
+        | |- dividable_by_32 (concat_byte ?EXPR _) =>
+          destruct EXPR
+      end; compute;
+      try solve [exists 0; reflexivity];
+      try solve [
+        match goal with
+          | |-
+            exists d:N, ?VAL = _ =>
+              remember (dividable_by_32_dec VAL) as foo;
+                destruct foo; auto
+        end];
+      match goal with
+        | |-
+          (exists d:N,
+            Npos ?D~0~0~0~0~0 = _) =>
+          exists (Npos D); reflexivity
+      end.
 
+
+  Lemma and_proper_mask_dividable : forall n,
+    dividable_by_32
+    (N_of_word
+      (to_word
+        (N_and (N_of_word proper_mask) n))).
+  Proof with (try solve [solve_and_proper]).
+
+
+    intro n.
+    change (N_of_word proper_mask) with 4294967264.
+    assert (dividable_by_32 4294967264).
+    exists 134217727; auto.
+    pose proof (dividable_by_32_and _ n H).
+    destruct H0. rewrite H0.
+    destruct x.
+      exists 0; reflexivity.
+      simpl.
+      unfold to_word, fst_byte. simpl.
+      repeat match goal with
+        | |-
+          context[match ?p with
+                    | _~1 => _
+                    | _~0 => _
+                    | 1%positive => _
+                  end] =>
+          destruct p
+      end; try solve_and_proper.
+  Qed.
 
   Lemma almost_there: forall ll code_size valid_addresses to_be_checked_addresses,
     validate_ll_list header_size Nempty Nempty ll
@@ -960,15 +1045,54 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
        destruct st2 as [state2_mem state2_regs state2_pc]; clean_state. subst.
        specialize (CLASSIFY_OK eq_refl). eauto.
      SSCase "Mask_instr".
+       Focus 1.
        clear CLASSIFY_OK CLASSIFY_DIRECT.
+       pose proof H5.
        eapply sem_Mask_instr_pc in H5; eauto.
+       eapply sem_Mask_instr_reg in H4; eauto.
        destruct st2 as [state2_mem state2_regs state2_pc]; clean_state. subst.
        specialize (CLASSIFY_MASK r w eq_refl).
        destruct CLASSIFY_MASK as
          [|[instr'[size_instr' ?]]]. eauto.
-       decompose [or and] H4.
        S3Case "Indirect_jump".
+         decompose [or and] H5. clear H5. subst.
+         assert (read_instr_from_memory m2' (state_pc st + N_of_nat n0) =
+           Some (instr', size_instr')) as READ_M2 by admit.
+         destruct' n as [|n].
+         S4Case "0%nat".
+           inv H1.
+           inv H5; clean_state; try clean_read; try omega'.
+           eapply sem_not_invalid_not_bad; eauto; congruence.
+         S4Case "S n".
+           inv H1.
+           pose proof H8 as STEP. eapply step_same_code in STEP.
+           (*eapply (IND_HYP n); eauto.*)
+           inv H8; clean_state; try clean_read; eauto.
+           S5Case "normal instr".
+             destruct st2 as [state3_mem state3_regs state3_pc]; clean_state.
+             edestruct sem_Indirect_jump_pc; eauto; instantiate; clean_state.
+             subst. eapply OK_DANGER with (n' := n) (m := m2'0); eauto.
+             subst. clear H11.
+             eapply OK_DANGER with (n' := n) (m := m2'0) (4 := H12); eauto.
+             eapply OK_div. simpl. rewrite H4.
+             unfold word_and. clear.
+             apply and_proper_mask_dividable.
+             
+           S5Case "before header".
+             eapply (IND_HYP n); eauto.
+             tri_split; eauto.
+             right. right. repeat split; eauto.
+             eapply validate_ll_list_correct_addr; eauto with nset.
+             
+
+     SSCase "Direct_jump".
+       clear CLASSIFY_OK CLASSIFY_MASK.
+       specialize (CLASSIFY_DIRECT w eq_refl).
        
+       destruct CLASSIFY_DIRECT.
+       destruct st2 as [state2_mem state2_regs state2_pc]; clean_state.
+       edestruct sem_Direct_jump_pc; eauto; instantiate; clean_state;
+         subst; eauto.
        
 
    SCase "from header".
