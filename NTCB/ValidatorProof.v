@@ -582,7 +582,25 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
       rewrite plus_N_of_nat in *;
       destruct (N_eq_dec addr addr0).
       SCase "=".
-      admit.
+       subst.
+        eapply' CA_intro; eauto; instantiate; try (try red; intros; congruence).
+        SSCase "SMALLER".
+          omega'.
+        SSCase "CLASSIFY_MASK".
+          intros. rewrite H4 in e4. inv e4; clean.
+          right. exists instr'; exists size_instr'; eauto.
+          repeat split; eauto.
+          clean_safe_minus_and_ll_safe_drop. omega'.
+          clean_safe_minus_and_ll_safe_drop. subst.
+          apply validate_n_byte_ok_addr in H.
+          rewrite N_of_plus in H.
+          repeat (rewrite N_of_plus).
+          match goal with
+            | H : ok_addr ?N1 _ _ ?N2 |-
+              ok_addr ?M1 _ _ ?M2 =>
+              replace M1 with N1;[replace M2 with N2|]
+          end. apply H. omega'. omega'.
+
       SCase "<>".
         replace (addr + (N_of_nat (size_instr + a1))) with
           (addr +  N_of_nat (size_instr + size_instr') + N_of_nat a4).
@@ -1057,7 +1075,14 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
        S3Case "Indirect_jump".
          decompose [or and] H5. clear H5. subst.
          assert (read_instr_from_memory m2' (state_pc st + N_of_nat n0) =
-           Some (instr', size_instr')) as READ_M2 by admit.
+           Some (instr', size_instr')) as READ_M2.
+         unfold read_instr_from_memory in *.
+         eapply parse_instruction_only_read; eauto.
+         intros. simpl.
+         assert (same_code (header_size + N_of_nat (ll_length ll)) (state_mem st) m2').
+           eauto.
+         unfold same_code in H8.
+         apply H8. omega'.
          destruct' n as [|n].
          S4Case "0%nat".
            inv H1.
@@ -1107,7 +1132,5 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
 
 
  *)
-
-
 
 End ValProof.
