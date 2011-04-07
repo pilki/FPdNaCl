@@ -640,21 +640,25 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
     forall addr,
       In_NSet addr valid_addresses' ->
       (addr < init_addr /\ In_NSet addr valid_addresses) \/
-      (addr >= init_addr).
+      (addr >= init_addr /\ addr < init_addr + N_of_nat (ll_length ll)).
   Proof.
     fun_ind_validate_ll; intros; clean; eauto.
     Case "fun_ind_validate_ll 1".
+    pose proof (validate_n_byte_size _ _ _ _ _ _ _ e).
+    rewrite H in *.
     edestruct validate_n_byte_add_valid_addresses_after as [[? ?]| [? ?]]; eauto.
     Case "fun_ind_validate_ll 2".
-    edestruct IHo as [[]|]; eauto.
+    edestruct IHo as [[]|[]]; eauto.
       SCase "premice".
         unfold NSet_smaller; intros.
         edestruct validate_n_byte_add_valid_addresses_after as [[]|[]]; eauto; omega'.
       SCase "left".
-        edestruct validate_n_byte_add_valid_addresses_after as [[]|[]]; eauto; omega'.
-
+        edestruct validate_n_byte_add_valid_addresses_after as [[]|[]]; eauto; try omega'.
+        right; split; eauto. eapply validate_n_byte_drop_n in e; eauto.
+        apply ll_safe_drop_size in e. omega'.
       SCase "right".
-        right. omega'.
+        right; split; try omega'. eapply validate_n_byte_drop_n in e; eauto.
+        apply ll_safe_drop_size in e. omega'.
   Qed.
 
   Lemma validate_ll_list_add_addr:
@@ -696,7 +700,7 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
       rewrite H4. rewrite N_of_plus. replace (N_of_nat 32) with 32 by reflexivity.
       rewrite Nplus_assoc.
 
-      edestruct validate_ll_list_add_valid_addresses_after as [[]|]; eauto.
+      edestruct validate_ll_list_add_valid_addresses_after as [[]|[]]; eauto.
       SCase "smaller".
         unfold NSet_smaller; intros;
           edestruct validate_n_byte_add_valid_addresses_after as [[]|[]]; eauto; omega'.
@@ -740,61 +744,18 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
           eauto.
   Qed.
 
-  Lemma validate_ll_list_two_steps: forall code_size (addr: N)
-    (valid_addresses to_be_checked_addresses: NSet) (ll: lazy_list byte)
-    valid_addresses' to_be_checked_addresses',
-    validate_ll_list addr valid_addresses to_be_checked_addresses ll =
-      Some (valid_addresses', to_be_checked_addresses') ->
-    addr + (N_of_nat (ll_length ll)) <= header_size + code_size ->
-    forall mem, memory_compat_addr_ll addr ll mem ->
-    (forall addr', In_NSet addr' valid_addresses ->
-     forall st, same_code (header_size + code_size) mem st.(state_mem) ->
-       In_NSet st.(state_pc) valid_addresses ->
-       two_steps_correct code_size
-         valid_addresses to_be_checked_addresses st) ->
-    (forall addr', In_NSet addr' valid_addresses' ->
-     forall st, same_code (header_size + code_size) mem st.(state_mem) ->
-       In_NSet st.(state_pc) valid_addresses' ->
-       two_steps_correct code_size
-         valid_addresses' to_be_checked_addresses' st).
-  Proof.
-    intros *.
-    fun_ind_validate_ll; intros; clean; eauto.
-    Case "fun_ind_validate_ll 1".
-      eapply validate_n_byte_two_steps; eauto.
-      apply validate_n_byte_size in e. rewrite e in H0. auto.
-    Case "fun_ind_validate_ll 2".
-      eapply IHo; eauto; clear IHo.
-
-      apply validate_n_byte_drop_n in e. apply ll_safe_drop_size in e.
-      rewrite e in H0. rewrite N_of_plus in H0. simpl N_of_nat in H0.
-      omega'.
-
-      replace 32 with (N_of_nat 32) by reflexivity.
-      eapply memory_compat_addr_ll_drop; eauto.
-
-      intros. eapply validate_n_byte_two_steps; eauto.
-      apply validate_n_byte_drop_n in e. apply ll_safe_drop_size in e.
-      rewrite e in H0. rewrite N_of_plus in H0. simpl N_of_nat in H0.
-      omega'.
-  Qed.
-
 
   Inductive danger_in_n_steps code_size st: nat -> Prop :=
   | DINS_O: step header_size code_size st DANGER_STATE -> danger_in_n_steps code_size st O
   | DINS_S: forall n st', step header_size code_size st (Normal_state st') ->
     danger_in_n_steps code_size st' n -> danger_in_n_steps code_size st (S n).
 
-
-
-
-
   Lemma dividable_by_32_header_size: dividable_by_32 header_size.
   Proof.
     exists 2048; reflexivity.
   Qed.
 
-  Local Hint Resolve addresses_multiple_of_32_in_valid_addresses correct_state_2_of_1 dividable_by_32_header_size.
+  Local Hint Resolve addresses_multiple_of_32_in_valid_addresses dividable_by_32_header_size.
 
   Lemma same_code_trans: forall code_segment_size st1 st2 st3,
     same_code code_segment_size st1 st2 -> same_code code_segment_size st2 st3 ->
@@ -816,19 +777,205 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
   Qed.
   Local Hint Resolve same_code_trans step_same_code.
 
+  Ltac clean_state :=
+    repeat
+    match goal with
+      | |-
+        context [state_pc
+          {| state_mem := ?MEM; state_regs := ?REGS; state_pc := ?PC|}] =>
+        change (state_pc
+          {| state_mem := MEM; state_regs := REGS; state_pc := PC|})
+      with PC in *
+      | H :  context [state_pc
+        {| state_mem := ?MEM; state_regs := ?REGS; state_pc := ?PC|}]|- _ =>
+      change (state_pc
+        {| state_mem := MEM; state_regs := REGS; state_pc := PC|})
+      with PC in *
+      | |-
+        context [state_mem
+          {| state_mem := ?MEM; state_regs := ?REGS; state_pc := ?PC|}] =>
+        change (state_mem
+          {| state_mem := MEM; state_regs := REGS; state_pc := PC|})
+      with MEM in *
+      | H :  context [state_mem
+        {| state_mem := ?MEM; state_regs := ?REGS; state_pc := ?PC|}]|- _ =>
+      change (state_mem
+        {| state_mem := MEM; state_regs := REGS; state_pc := PC|})
+      with MEM in *
+      | |-
+        context [state_regs
+          {| state_mem := ?MEM; state_regs := ?REGS; state_pc := ?PC|}] =>
+        change (state_regs
+          {| state_mem := MEM; state_regs := REGS; state_pc := PC|})
+      with REGS in *
+      | H :  context [state_regs
+        {| state_mem := ?MEM; state_regs := ?REGS; state_pc := ?PC|}]|- _ =>
+      change (state_regs
+        {| state_mem := MEM; state_regs := REGS; state_pc := PC|})
+      with REGS in *
+    end.
+
+  Lemma tri_split n1 n2 n: 
+    n < n1 \/
+    (n1 <= n /\ n < n2) \/
+    n2 <= n.
+  Proof.
+    destruct (N_lt_dec n n1); auto.
+    destruct (N_lt_dec n n2); auto.
+  Qed.
+
+  Lemma memory_compat_same_code header_size ll mem1 mem2:
+    memory_compat_addr_ll header_size ll mem1 ->
+    same_code (header_size + N_of_nat (ll_length ll)) mem1 mem2 ->
+    memory_compat_addr_ll header_size ll mem2.
+  Proof.
+    unfold memory_compat_addr_ll, same_code.
+    intros.
+    rewrite H; auto.
+    apply H0. omega'.
+  Qed.
+  Local Hint Resolve memory_compat_same_code.
+
+  Lemma le_sym_1: forall n1 n2, n1 <= n2 -> n2 >= n1. intros; omega'. Qed.
+  Lemma le_sym_2: forall n1 n2, n1 >= n2 -> n2 <= n1. intros; omega'. Qed.
+  Local Hint Resolve le_sym_2 le_sym_1.
 
 
 
-  Theorem roxx: forall ll code_size valid_addresses to_be_checked_addresses,
-    validate_ll_list header_size Nempty Nempty ll = Some (valid_addresses, to_be_checked_addresses) ->
+  Lemma almost_there: forall ll code_size valid_addresses to_be_checked_addresses,
+    validate_ll_list header_size Nempty Nempty ll
+      = Some (valid_addresses, to_be_checked_addresses) ->
     Nincluded to_be_checked_addresses valid_addresses ->
     code_size = N_of_nat (ll_length ll) ->
     forall mem, memory_compat_addr_ll header_size ll mem ->
     forall n,
-    forall st, same_code (header_size + code_size) mem st.(state_mem) ->
-      correct_state_2 code_size valid_addresses st->
-      danger_in_n_steps code_size st n -> False.
+    forall st,
+      danger_in_n_steps code_size st n -> 
+      same_code (header_size + code_size) mem st.(state_mem) ->
+      ( (st.(state_pc) < header_size /\ dividable_by_32 st.(state_pc)) \/
+        (header_size + code_size) <= st.(state_pc) \/        
+        (header_size <= st.(state_pc) /\ st.(state_pc) < (header_size + code_size)
+          /\ correct_addr st.(state_mem) (header_size + code_size)
+               valid_addresses to_be_checked_addresses st.(state_pc))) ->
+      False.
   Proof.
+    Ltac clean_read :=
+      match goal with
+        | H : read_instr_from_memory ?M ?A = _ |- _ =>
+          match goal with
+            | H' : read_instr_from_memory M A = _ |- _ =>
+              match H with
+                | H' => fail 1
+                | _ => rewrite H in H'; clean
+              end
+          end
+      end.
+    Ltac tri_split:=
+      match goal with
+        | |- context[header_size + ?code_size <= ?VAL] =>
+          decompose [and or]
+            (tri_split header_size (header_size + code_size)
+              VAL); eauto
+      end.
+
+    intros * VALIDATE INCLUDED CODE_SIZE mem COMPAT n.
+    assert (forall addr, In_NSet addr valid_addresses ->
+      header_size <= addr) as ADDR_SUP.
+    intros.
+    edestruct validate_ll_list_add_valid_addresses_after as [[]|[]]; eauto with nset.
+      elimtype False; eauto with nset.
+
+    assert (forall addr, In_NSet addr valid_addresses ->
+      addr < header_size + code_size) as ADDR_INF.
+    intros.
+    edestruct validate_ll_list_add_valid_addresses_after as [[]|[]]; eauto with nset.
+      elimtype False; eauto with nset. omega'.
+
+    pose proof (addresses_multiple_of_32_in_valid_addresses _ _ _ _ _ _ 
+    dividable_by_32_header_size VALIDATE) as IN_SET.
+
+    assert (forall mem,
+      memory_compat_addr_ll header_size ll mem ->
+      forall addr : N,
+      addr >= header_size ->
+      In_NSet addr valid_addresses ->
+      correct_addr mem (header_size + N_of_nat (ll_length ll))
+        valid_addresses to_be_checked_addresses addr) as IMP_CORRECT.
+    eapply validate_ll_list_correct_addr; eauto with nset.
+
+    apply (lt_wf_ind n). clear n.
+    intros n IND_HYP st DANGER SAME CORRECT.
+    destruct' n as [|n]; inv DANGER.
+    Case "0%nat".
+      decompose [and or] CORRECT.
+      SCase "inf".
+        inv H; eauto; inv H0; omega'.
+      SCase "sup".
+        inv H; eauto; (try solve [inv H0; omega']). omega'.
+      SCase "incode".
+      inv H3; inv H;
+      try clean_read.
+      SSCase "to bad".
+        destruct' (classify_instruction instr) as [] _eqn; try congruence;
+          eapply sem_not_invalid_not_bad; eauto; congruence.
+      SSCase "not div".
+        omega'.
+   Case "S n".
+   pose proof (step_same_code _ _ _ _ H0).
+   assert (forall addr n' m regs,
+     ok_addr (header_size + N_of_nat (ll_length ll))
+       valid_addresses to_be_checked_addresses addr ->
+     (n' < S n)%nat ->
+     same_code (header_size + N_of_nat (ll_length ll)) mem m ->
+     danger_in_n_steps (N_of_nat (ll_length ll))
+     {| state_mem := m;
+        state_regs := regs;
+        state_pc := addr |} n' ->
+     False) as OK_DANGER.
+   Focus 1.
+   intros.
+   eapply IND_HYP; eauto.
+   clean_state.
+   destruct' H2.
+   SCase "OA_Valid".
+     right; right; repeat split; eauto.
+   SCase "OK_checked".
+     right; right; repeat split; eauto.
+     eapply validate_ll_list_correct_addr; eauto with nset.
+   SCase "OK_next".
+     right; left; omega'.
+   SCase "OK_div".
+     tri_split; eauto with nset.
+     right; right; repeat split; eauto.
+
+   inv H0.
+   SCase "normal step".
+     inv H3. decompose [and or] CORRECT; try omega'.
+     inv H9; clean_read.
+     unfold read_instr_from_memory in READ_FROM_MEM.
+     destruct' (classify_instruction instr) as [] _eqn; try congruence.
+     SSCase "@OK_instr".
+       clear CLASSIFY_DIRECT CLASSIFY_MASK.
+       eapply sem_OK_instr_pc in H5; eauto.
+       destruct st2 as [state2_mem state2_regs state2_pc]; clean_state. subst.
+       specialize (CLASSIFY_OK eq_refl). eauto.
+     SSCase "Mask_instr".
+       clear CLASSIFY_OK CLASSIFY_DIRECT.
+       eapply sem_Mask_instr_pc in H5; eauto.
+       destruct st2 as [state2_mem state2_regs state2_pc]; clean_state. subst.
+       specialize (CLASSIFY_MASK r w eq_refl).
+       destruct CLASSIFY_MASK as
+         [|[instr'[size_instr' ?]]]. eauto.
+       decompose [or and] H4.
+       S3Case "Indirect_jump".
+       
+       
+
+   SCase "from header".
+     eapply IND_HYP; eauto.
+     decompose [and or] (tri_split header_size (header_size + N_of_nat (ll_length ll)) pc2); eauto.
+     right. right. repeat split; eauto.
+     eapply validate_ll_list_correct_addr; eauto with nset.
   Qed.
 
 (* toutes les addresses multiple de 32 sont dans valid_addresses
