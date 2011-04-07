@@ -552,8 +552,44 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
     Case "fun_ind_validate_n_byte 1".
       specialize (H0 _ H3). contradiction.
     Case "fun_ind_validate_n_byte 3".
-    admit. admit.
-
+    pose proof (safe_minus_correct _ _ e3) as SIZE; subst.
+    rewrite plus_0_r.
+    destruct (Nadd_In_or _ _ _ H3).
+      SCase "=". subst.
+        eapply' CA_intro; eauto; instantiate; try (try red; intros; congruence).
+        SSCase "SMALLER".
+          omega'.
+      SCase "<>".
+        specialize (H0 _ H). contradiction.
+    Case "fun_ind_validate_n_byte 4".
+      pose proof (safe_minus_correct _ _ e3) as SIZE; subst;
+      rewrite plus_N_of_nat in *;
+      destruct (N_eq_dec addr addr0).
+      SCase "=".
+      admit.
+      SCase "<>".
+        replace (addr + (N_of_nat (size_instr + a1))) with
+          (addr +  N_of_nat (size_instr + size_instr') + N_of_nat a4).
+        SSCase "use replacement".
+          eapply IHo; eauto.
+          S3Case "NSet_smaller".
+            unfold NSet_smaller in *. intros.
+            destruct (Nadd_In_or _ _ _ H4).
+            S4Case " = ".
+              subst. rewrite N_of_plus. 
+              apply size_instr_not_0_N in e7. omega'.
+            S4Case "In".
+              specialize (H0 _ H5). omega'.
+          S3Case "memory_compat".
+            eapply memory_compat_addr_ll_drop in H1; eauto.
+            rewrite ll_safe_drop_plus. rewrite e2. auto.
+            eapply HELPER1; eauto.
+            apply size_instr_not_0_N in e7. omega'.
+        SSCase "prove replacement".
+          clean_safe_minus.
+          eapply ll_safe_drop_size in e11.
+          eapply ll_safe_drop_size in e2.
+          omega'.
     Case "fun_ind_validate_n_byte 12".
       Focus 1.
       apply is_Nin_NIn in e6. 
@@ -580,7 +616,7 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
           split; eauto with nset.
        SCase "<>".
        eapply IHo; eauto.
-  Admitted.
+  Qed.
 
   Lemma validate_n_byte_two_steps: forall code_size (n: nat) (addr: N)
     (valid_addresses to_be_checked_addresses: NSet) (ll: lazy_list byte)
