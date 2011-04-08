@@ -80,7 +80,7 @@ Module Type INSTRUCTION.
     parse_instruction ll = Some (instr, n) -> n <> O.
 
   Parameter size_instr_inf_max_size: forall ll instr n,
-    parse_instruction ll = Some (instr, n) -> (n < instr_max_size)%nat.
+    parse_instruction ll = Some (instr, n) -> (n <= instr_max_size)%nat.
 
 
   Parameter classify_instruction: instruction -> instruction_classification register.

@@ -1,4 +1,4 @@
-DIRS=TCB NTCB
+DIRS=TCB NTCB ASM
 
 INCLUDES=$(patsubst %,-I %, $(DIRS))
 
@@ -22,10 +22,11 @@ GPATH=$(DIRS)
 
 NTCB=NSet.v Lib.v BinaryAux.v Validator.v DoOption.v ValidatorProof.v
 TCB=BinaryDefs.v BinaryProps.v Semantics.v SemanticsProg.v LazyList.v ValidatorProp.v Memory.v
+ASM=ASM.v
 
 EXTRACTION=extraction.v
 
-FILES=$(NTCB) $(TCB)
+FILES=$(NTCB) $(TCB) $(ASM)
 
 proof: $(FILES:.v=.vo)
 

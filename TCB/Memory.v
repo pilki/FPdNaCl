@@ -71,7 +71,7 @@ Module Mem(Import I : INSTRUCTION).
     intros COMPAT * PARSE.
     unfold read_instr_from_memory.
     remember instr_max_size as ims.
-    assert (size_instr < ims)%nat.
+    assert (size_instr <= ims)%nat.
       subst. eapply size_instr_inf_max_size; eauto.
     clear Heqims.
     eapply parse_instruction_only_read; eauto.
@@ -101,7 +101,7 @@ Module Mem(Import I : INSTRUCTION).
         reflexivity.
       SCase "S".
         destruct ims; [elimtype False; omega|].
-        assert (size_instr < ims)%nat by omega.
+        assert (size_instr <= ims)%nat by omega.
         assert (ll_length ll' >= size_instr)%nat by omega.
         simpl in *. inv H0; clean. inv_opt.
         pose proof COMPAT.
