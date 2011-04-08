@@ -1,4 +1,5 @@
 Require Import Lib.
+Require Import DoOption.
 Set Implicit Arguments.
 Require Import BinaryProps.
 CoInductive lazy (X:Type) :=
@@ -78,6 +79,20 @@ Fixpoint ll_safe_drop {X} (n: nat) (ll: lazy_list X) :=
       end
   end.
 
+
+  (* to lib *)
+Lemma ll_safe_drop_nth {X}: forall n (ll: lazy_list X) ll',
+  ll_safe_drop n ll = Some ll' ->
+  forall i, ll_nth i ll' = ll_nth (n + i) ll.
+Proof.
+  induction' n as [|n]; auto; simpl; intros; clean.
+  Case "S n".
+    destruct' ll as [|x [ll]]; clean.
+Qed.
+
+
+
+
 Lemma ll_safe_drop_size {X} n: forall  (ll ll': lazy_list X),
   ll_safe_drop n ll = Some ll' ->
   ll_length ll = (n + ll_length ll')%nat.
@@ -90,7 +105,29 @@ Proof.
 Qed.
 
 
-Definition byte_map := nat -> option byte.
+Fixpoint ll_safe_take {X} (n: nat) (ll: lazy_list X) :=
+  match n with
+    | O => Some 〈〉
+    | S n' =>
+      match ll with
+        | 〈〉 => None
+        | x ::: ll' =>
+          do ll'' <- ll_safe_take n' ll';
+          Some (x ::: ll'')
+      end
+  end.
+
+Lemma ll_safe_take_size {X} n: forall  (ll ll': lazy_list X),
+  ll_safe_take n ll = Some ll' ->
+  ll_length ll' = n.
+Proof.
+  induction n; simpl;intros; clean; eauto.
+  destruct ll as [|x []]; clean. inv_opt.
+  simpl. f_equal. eauto.
+Qed.
+
+
+(*Definition byte_map := nat -> option byte.
 Definition eq_byte_map (bm1 bm2: byte_map) := forall n, bm1 n = bm2 n.
 Notation "bm1 ≡ bm2" := (eq_byte_map bm1 bm2) (at level 70, no associativity).
 
@@ -116,4 +153,4 @@ Definition update_byte_map (bm: byte_map) (loc:nat) (ob: option byte): byte_map 
 
 
 Definition byte_map_from_ll (ll: lazy_list byte) : byte_map:=
-  fun n => ll_nth n ll.
+  fun n => ll_nth n ll. *)

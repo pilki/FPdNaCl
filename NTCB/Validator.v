@@ -7,7 +7,7 @@ Require Import NSet.
 Require Import BinaryProps.
 Require Import Recdef.
 Require Export DoOption.
-
+Require Import SemanticsProg.
 
 
 Module ValidatorCode (Import I: INSTRUCTION).
@@ -22,7 +22,7 @@ Module ValidatorCode (Import I: INSTRUCTION).
     match n with
       | O => Some (valid_addresses, to_be_checked_addresses, ll)
       | _ =>
-        do (instr, size_instr) <- parse_instruction (byte_map_from_ll ll);
+        do (instr, size_instr) <- parse_instruction ll;
         do ll' <- ll_safe_drop size_instr ll;
         do n' <- safe_minus n size_instr;
         let addr' := addr + (N_of_nat size_instr) in
@@ -35,9 +35,9 @@ Module ValidatorCode (Import I: INSTRUCTION).
               | left _ =>
                 (* if we are masking with the right mask, we check the next instruction*)
                 match n' with
-                  | O => Some (Nadd addr valid_addresses, to_be_checked_addresses, ll') 
+                  | O => Some (Nadd addr valid_addresses, to_be_checked_addresses, ll')
                   | _ =>
-                    do (instr', size_instr') <- parse_instruction (byte_map_from_ll ll');
+                    do (instr', size_instr') <- parse_instruction ll';
                     match classify_instruction instr' with
                       | Indirect_jump reg2 => (* an indirect jump *)
                         match register_eq_dec reg1 reg2 with
@@ -161,8 +161,6 @@ Module ValidatorCode (Import I: INSTRUCTION).
     simpl in *. destruct l. omega.
   Qed.
 
-  Definition header_size := 65536.
-
   Definition validate_program ll :=
     match validate_ll_list header_size Nempty Nempty ll with
       | None => false
@@ -170,4 +168,4 @@ Module ValidatorCode (Import I: INSTRUCTION).
         is_Nincluded to_be_checked_addresses valid_addresses
     end.
 End ValidatorCode.
-  
+

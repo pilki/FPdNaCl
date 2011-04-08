@@ -21,7 +21,7 @@ VPATH=$(DIRS)
 GPATH=$(DIRS)
 
 NTCB=NSet.v Lib.v BinaryAux.v Validator.v DoOption.v ValidatorProof.v
-TCB=BinaryDefs.v BinaryProps.v Semantics.v SemanticsProp.v LazyList.v ValidatorProp.v
+TCB=BinaryDefs.v BinaryProps.v Semantics.v SemanticsProg.v LazyList.v ValidatorProp.v Memory.v
 
 EXTRACTION=extraction.v
 

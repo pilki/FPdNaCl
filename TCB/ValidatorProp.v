@@ -3,17 +3,17 @@ Require Import BinaryProps.
 Require Import List.
 Require Import LazyList.
 Require Import Semantics.
-Require Import SemanticsProp.
+Require Import SemanticsProg.
 Require Import NSet.
 Require Import BinaryProps.
 Require Import Recdef.
 Require Import Validator.
 Require Import ValidatorProof.
+Require Import Memory.
 
+Module ValProp (Import I : INSTRUCTION).
 
-Module ValProp (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP(I)).
-
-  Module VP := ValProof I ISP.
+  Module VP := ValProof I.
   Import VP.
   Import Val.
   Import ProgSem.
@@ -29,7 +29,7 @@ Module ValProp (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP(
     forall st,
       memory_compat_addr_ll header_size ll st.(state_mem) ->
       dividable_by_32 st.(state_pc) ->
-      ~accessible_danger header_size (N_of_nat (ll_length ll)) st. 
+      ~accessible_danger (N_of_nat (ll_length ll)) st. 
   Proof.
     intros. intro.
 
@@ -40,7 +40,6 @@ Module ValProp (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP(
       edestruct IHaccessible_danger; eauto.
       exists (S x). econstructor; eauto.
     destruct H3.
-      
 
     unfold validate_program in H.
     destruct (validate_ll_list header_size Nempty Nempty ll) as [] _eqn; eauto.
@@ -61,7 +60,7 @@ Module ValProp (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP(
     forall st,
       memory_compat_addr_ll header_size ll st.(state_mem) ->
       st.(state_pc) = header_size ->
-      ~accessible_danger header_size (N_of_nat (ll_length ll)) st. 
+      ~accessible_danger (N_of_nat (ll_length ll)) st.
   Proof.
     intros. apply validator_dividable_no_danger; auto.
     rewrite H1. apply dividable_by_32_header_size.

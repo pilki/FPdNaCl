@@ -3,18 +3,18 @@ Require Import BinaryProps.
 Require Import List.
 Require Import LazyList.
 Require Import Semantics.
-Require Import SemanticsProp.
+Require Import SemanticsProg.
 Require Import NSet.
 Require Import BinaryProps.
 Require Import Recdef.
 Require Import Validator.
+Require Import Memory.
 
-
-Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP(I)).
+Module ValProof (Import I : INSTRUCTION).
   Module Val := ValidatorCode(I).
   Module ProgSem := Prog_Semantics(I).
-  Import ProgSem.
-  Import Val.
+  Export ProgSem.
+  Export Val.
   Ltac fun_ind_validate_n_byte :=
     match goal with
       | |- context[ validate_n_byte ?n ?a ?va ?tbca ?ll] =>
@@ -167,7 +167,6 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
     apply ll_safe_drop_size in e11.
     apply safe_minus_correct in e12. omega.
   Qed.
-
   Ltac omega' := zify; omega.
 
   Lemma addresses_multiple_of_32_in_valid_addresses:
@@ -186,7 +185,7 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
       apply validate_n_byte_add_addr in e.
       replace addr' with addr. assumption.
       rewrite H0 in H2. simpl in H2.
-      destruct H. destruct H3. omega'.
+      destruct H. destruct H3. subst. omega'.
 
     Case "fun_ind_validate_ll 2".
       assert (dividable_by_32 (addr + 32)).
@@ -254,21 +253,18 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
         classify_instruction instr' = Indirect_jump reg)),
     correct_addr mem next_addr valid_addresses
       to_be_checked_addresses addr.
-      
+
+
+
   Lemma correct_addr_same_code mem1 mem2
     next_addr valid_addresses to_be_checked_addresses addr:
-    same_code next_addr mem1 mem2 ->
+    (forall addr, addr < next_addr -> mem1 addr = mem2 addr) ->
     correct_addr mem1 next_addr valid_addresses to_be_checked_addresses addr ->
     correct_addr mem2 next_addr valid_addresses to_be_checked_addresses addr.
   Proof.
     intros SAME CORRECT.
     inv CORRECT.
     eapply' CA_intro; eauto.
-    Case "READ_FROM_MEM".
-      clear - SAME READ_FROM_MEM SMALLER.
-      unfold same_code, read_instr_from_memory in *.
-      eapply parse_instruction_only_read; eauto.
-      intros. simpl. apply SAME. omega'.
     Case "CLASSIFY_MASK".
       intros * OK.
       specialize (CLASSIFY_MASK reg w OK).
@@ -276,9 +272,6 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
       decompose [and] H.
       right. exists instr'; exists size_instr'.
       repeat split; eauto.
-      unfold same_code, read_instr_from_memory in *.
-      eapply parse_instruction_only_read; eauto.
-      intros. simpl. apply SAME. omega'.
   Qed.
 
   Lemma ok_addr_bigger next_addr next_addr' valid_addresses
@@ -320,38 +313,6 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
   Qed.
 
 
-
-
-  Definition memory_compat_addr_ll addr ll (mem: memory):=
-    forall n, (n < ll_length ll)%nat -> ll_nth n ll = mem (addr + N_of_nat n).
-
-
-  (* to lib *)
-  Lemma ll_safe_drop_nth {X}: forall n (ll: lazy_list X) ll',
-    ll_safe_drop n ll = Some ll' ->
-    forall i, ll_nth i ll' = ll_nth (n + i) ll.
-  Proof.
-    induction' n as [|n]; auto; simpl; intros; clean.
-    Case "S n".
-      destruct' ll as [|x [ll]]; clean.
-  Qed.
-
-
-
-
-  Lemma memory_compat_addr_ll_drop: forall addr ll mem n ll',
-    ll_safe_drop n ll = Some ll' ->
-    memory_compat_addr_ll addr ll mem ->
-    memory_compat_addr_ll (addr + N_of_nat n) ll' mem.
-  Proof.
-    unfold memory_compat_addr_ll. intros.
-    erewrite ll_safe_drop_nth; eauto.
-    rewrite <- Nplus_assoc. rewrite <- N_of_plus. apply H0.
-    apply ll_safe_drop_size in H. omega.
-  Qed.
-
-  Local Hint Resolve memory_compat_addr_ll_drop.
-
   (* LIB *)
   Require Import ZArith_dec.
   Lemma N_le_dec: forall n1 n2: N, {n1 <= n2} + {n2 < n1}.
@@ -368,27 +329,6 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
     left. omega'. right; omega'.
   Qed.
 
-
-  Lemma parse_instr_impl_read_instr:
-    forall ll instr size_instr addr mem,
-      parse_instruction (byte_map_from_ll ll) = Some (instr, size_instr) ->
-      memory_compat_addr_ll addr ll mem ->
-      read_instr_from_memory mem addr = Some (instr, size_instr).
-  Proof.
-    unfold read_instr_from_memory, memory_compat_addr_ll.
-    intros.
-    eapply parse_instruction_only_read; eauto.
-    intros.
-    unfold byte_map_from_ll. rewrite Nplus_comm. eapply H0.
-    assert (size_instr <= ll_length ll)%nat; try omega.
-    destruct (le_lt_dec size_instr (ll_length ll)); auto.
-    pose proof (parse_instruction_do_read H l).
-    unfold byte_map_from_ll in H2.
-    elimtype False. revert H2. clear.
-    induction ll as [|? []]; simpl; eauto.
-  Qed.
-    
-  
 
   Ltac clean_safe_minus :=
     repeat match goal with
@@ -432,7 +372,7 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
     unfold NSet_smaller; intros.
     specialize (H0 _ H1). omega'.
   Qed.
-  
+
 
 
   Lemma size_instr_not_0_N: forall bm instr n,
@@ -528,9 +468,9 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
       apply OA_Valid. eauto with nset.
   Qed.
   Local Hint Resolve validate_n_byte_ok_addr.
-    
 
-  Local Hint Resolve HELPER1 parse_instr_impl_read_instr.
+
+  Local Hint Resolve HELPER1 memory_compat_read_instr.
 
   Lemma validate_n_byte_correct_addr n init_addr valid_addresses to_be_checked_addresses ll
     valid_addresses' to_be_checked_addresses' ll':
@@ -610,7 +550,7 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
             unfold NSet_smaller in *. intros.
             destruct (Nadd_In_or _ _ _ H4).
             S4Case " = ".
-              subst. rewrite N_of_plus. 
+              subst. rewrite N_of_plus.
               apply size_instr_not_0_N in e7. omega'.
             S4Case "In".
               specialize (H0 _ H5). omega'.
@@ -626,7 +566,7 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
           omega'.
     Case "fun_ind_validate_n_byte 12".
       Focus 1.
-      apply is_Nin_NIn in e6. 
+      apply is_Nin_NIn in e6.
       pose proof (safe_minus_correct _ _ e3) as SIZE; subst;
       rewrite plus_N_of_nat in *;
       destruct (N_eq_dec addr addr0).
@@ -729,7 +669,7 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
       SCase "left".
         eapply validate_n_byte_correct_addr in e; eauto.
         change (N_of_nat 32) with 32 in *.
-        assert (forall addr', 
+        assert (forall addr',
           ok_addr (addr + 32) valid_addresses'0 to_be_checked_addresses'0 addr' ->
           ok_addr (addr + 32 + N_of_nat (ll_length ll')) valid_addresses'
             to_be_checked_addresses' addr').
@@ -768,8 +708,8 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
 
 
   Inductive danger_in_n_steps code_size st: nat -> Prop :=
-  | DINS_O: step header_size code_size st DANGER_STATE -> danger_in_n_steps code_size st O
-  | DINS_S: forall n st', step header_size code_size st (Normal_state st') ->
+  | DINS_O: step code_size st DANGER_STATE -> danger_in_n_steps code_size st O
+  | DINS_S: forall n st', step code_size st (Normal_state st') ->
     danger_in_n_steps code_size st' n -> danger_in_n_steps code_size st (S n).
 
   Lemma dividable_by_32_header_size: dividable_by_32 header_size.
@@ -778,27 +718,6 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
   Qed.
 
   Local Hint Resolve addresses_multiple_of_32_in_valid_addresses dividable_by_32_header_size.
-
-  Lemma same_code_trans: forall code_segment_size st1 st2 st3,
-    same_code code_segment_size st1 st2 -> same_code code_segment_size st2 st3 ->
-    same_code code_segment_size st1 st3.
-  Proof.
-    unfold same_code; intros.
-    rewrite H; eauto.
-  Qed.
-
-  Lemma step_same_code: forall header_size code_size st1 st2,
-    step header_size code_size st1 (Normal_state st2) ->
-    same_code (header_size + code_size) st1.(state_mem) st2.(state_mem).
-  Proof.
-    intros * STEP.
-    inv STEP; simpl in *; eauto.
-    destruct H0.
-    pose proof (sem_no_overwrite _ _ _ _ H2).
-    unfold same_code in *; intros. rewrite H3; eauto.
-  Qed.
-  Local Hint Resolve same_code_trans step_same_code.
-
   Ltac clean_state :=
     repeat
     match goal with
@@ -837,7 +756,21 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
       with REGS in *
     end.
 
-  Lemma tri_split n1 n2 n: 
+  Lemma step_same_code: forall code_size st1 st2,
+    step code_size st1 (Normal_state st2) ->
+    same_code code_size st1.(state_mem) st2.(state_mem).
+  Proof.
+    intros * STEP.
+    inv STEP; clean_state; eauto.
+    destruct H0.
+    pose proof (sem_no_overwrite H2).
+    unfold same_code in *; intros. rewrite H3; eauto.
+    eapply H4. omega'.
+  Qed.
+  Local Hint Resolve same_code_trans step_same_code.
+
+
+  Lemma tri_split n1 n2 n:
     n < n1 \/
     (n1 <= n /\ n < n2) \/
     n2 <= n.
@@ -871,19 +804,6 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
     apply translate_by_5_dividable_by_32.
     apply translate_and. auto.
   Qed.
-
-
-  Lemma memory_compat_same_code header_size ll mem1 mem2:
-    memory_compat_addr_ll header_size ll mem1 ->
-    same_code (header_size + N_of_nat (ll_length ll)) mem1 mem2 ->
-    memory_compat_addr_ll header_size ll mem2.
-  Proof.
-    unfold memory_compat_addr_ll, same_code.
-    intros.
-    rewrite H; auto.
-    apply H0. omega'.
-  Qed.
-  Local Hint Resolve memory_compat_same_code.
 
   Lemma le_sym_1: forall n1 n2, n1 <= n2 -> n2 >= n1. intros; omega'. Qed.
   Lemma le_sym_2: forall n1 n2, n1 >= n2 -> n2 <= n1. intros; omega'. Qed.
@@ -953,10 +873,10 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
     forall mem, memory_compat_addr_ll header_size ll mem ->
     forall n,
     forall st,
-      danger_in_n_steps code_size st n -> 
-      same_code (header_size + code_size) mem st.(state_mem) ->
+      danger_in_n_steps code_size st n ->
+      same_code code_size mem st.(state_mem) ->
       ( (st.(state_pc) < header_size /\ dividable_by_32 st.(state_pc)) \/
-        (header_size + code_size) <= st.(state_pc) \/        
+        (header_size + code_size) <= st.(state_pc) \/
         (header_size <= st.(state_pc) /\ st.(state_pc) < (header_size + code_size)
           /\ correct_addr st.(state_mem) (header_size + code_size)
                valid_addresses to_be_checked_addresses st.(state_pc))) ->
@@ -994,7 +914,7 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
     edestruct validate_ll_list_add_valid_addresses_after as [[]|[]]; eauto with nset.
       elimtype False; eauto with nset. omega'.
 
-    pose proof (addresses_multiple_of_32_in_valid_addresses _ _ _ _ _ _ 
+    pose proof (addresses_multiple_of_32_in_valid_addresses _ _ _ _ _ _
     dividable_by_32_header_size VALIDATE) as IN_SET.
 
     assert (forall mem,
@@ -1024,12 +944,12 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
       SSCase "not div".
         omega'.
    Case "S n".
-   pose proof (step_same_code _ _ _ _ H0).
+   pose proof (step_same_code _ _ _ H0).
    assert (forall addr n' m regs,
      ok_addr (header_size + N_of_nat (ll_length ll))
        valid_addresses to_be_checked_addresses addr ->
      (n' < S n)%nat ->
-     same_code (header_size + N_of_nat (ll_length ll)) mem m ->
+     same_code (N_of_nat (ll_length ll)) mem m ->
      danger_in_n_steps (N_of_nat (ll_length ll))
      {| state_mem := m;
         state_regs := regs;
@@ -1075,14 +995,14 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
        S3Case "Indirect_jump".
          decompose [or and] H5. clear H5. subst.
          assert (read_instr_from_memory m2' (state_pc st + N_of_nat n0) =
-           Some (instr', size_instr')) as READ_M2.
-         unfold read_instr_from_memory in *.
+           Some (instr', size_instr')) as READ_M2 by eauto.
+(*         unfold read_instr_from_memory in *.
          eapply parse_instruction_only_read; eauto.
          intros. simpl.
-         assert (same_code (header_size + N_of_nat (ll_length ll)) (state_mem st) m2').
+         assert (same_code (N_of_nat (ll_length ll)) (state_mem st) m2').
            eauto.
-         unfold same_code in H8.
-         apply H8. omega'.
+         unfold same_code in H5.
+         apply H5. omega'.*)
          destruct' n as [|n].
          S4Case "0%nat".
            inv H1.
@@ -1102,23 +1022,23 @@ Module ValProof (Import I : INSTRUCTION) (Import ISP: INSTRUCTION_SEMANTICS_PROP
              eapply OK_div. simpl. rewrite H4.
              unfold word_and. clear.
              apply and_proper_mask_dividable.
-             
+
            S5Case "before header".
              eapply (IND_HYP n); eauto.
              tri_split; eauto.
              right. right. repeat split; eauto.
              eapply validate_ll_list_correct_addr; eauto with nset.
-             
+
 
      SSCase "Direct_jump".
        clear CLASSIFY_OK CLASSIFY_MASK.
        specialize (CLASSIFY_DIRECT w eq_refl).
-       
+
        destruct CLASSIFY_DIRECT.
        destruct st2 as [state2_mem state2_regs state2_pc]; clean_state.
        edestruct sem_Direct_jump_pc; eauto; instantiate; clean_state;
          subst; eauto.
-       
+
 
    SCase "from header".
      eapply IND_HYP; eauto.
