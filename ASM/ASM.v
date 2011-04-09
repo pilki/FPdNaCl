@@ -6,7 +6,7 @@ Require Import LazyList.
 Require Import Semantics.
 Require Import Memory.
 Require Export DoOption.
-
+Require Import Validator.
 
 (* a toy assembly language *)
 
@@ -412,3 +412,5 @@ Open Scope N_scope.
 End Instruction.
 
 
+Module Val := ValidatorCode Instruction.
+Definition validate_program := Val.validate_program.
