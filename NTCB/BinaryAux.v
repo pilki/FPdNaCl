@@ -128,7 +128,7 @@ Proof.
 Qed.
 
 
-Definition to_word n :=
+Definition word_of_N n :=
   let (b1, n1):= fst_byte n in
   let (b2, n2):= fst_byte n1 in
   let (b3, n3):= fst_byte n2 in

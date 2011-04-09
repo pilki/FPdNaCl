@@ -839,7 +839,7 @@ Module ValProof (Import I : INSTRUCTION).
   Lemma and_proper_mask_dividable : forall n,
     dividable_by_32
     (N_of_word
-      (to_word
+      (word_of_N
         (N_and (N_of_word proper_mask) n))).
   Proof with (try solve [solve_and_proper]).
 
@@ -853,7 +853,7 @@ Module ValProof (Import I : INSTRUCTION).
     destruct x.
       exists 0; reflexivity.
       simpl.
-      unfold to_word, fst_byte. simpl.
+      unfold word_of_N, fst_byte. simpl.
       repeat match goal with
         | |-
           context[match ?p with

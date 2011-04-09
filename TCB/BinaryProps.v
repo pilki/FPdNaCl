@@ -21,10 +21,10 @@ Proof.
 Qed.
 
 Lemma word_of_word: forall w,
-  to_word (N_of_word w) = w.
+  word_of_N (N_of_word w) = w.
 Proof.
   destruct w as [b4 b3 b2 b1].
-  unfold to_word.
+  unfold word_of_N.
   simpl. repeat rewrite fst_byte_of_byte.
   unfold fst_byte, N_of_byte.
   rewrite fst_four_bits_of_half_byte.
@@ -32,7 +32,7 @@ Proof.
 Qed.
 
 Definition word_and w1 w2 :=
-  to_word (N_and (N_of_word w1) (N_of_word w2)).
+  word_of_N (N_and (N_of_word w1) (N_of_word w2)).
 
 Lemma word_and_same w: word_and w w = w.
 Proof.
