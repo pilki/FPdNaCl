@@ -1,3 +1,5 @@
 *.vo
 *~
 .depend
+_build
+validator

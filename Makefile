@@ -17,6 +17,13 @@ OCB_OPTIONS=\
   -no-links \
   -I extraction $(INCLUDES)
 
+ifneq (,$(findstring CYGWIN,$(shell uname -s)))
+SLN=cp
+else
+SLN=ln -s
+endif
+
+
 VPATH=$(DIRS)
 GPATH=$(DIRS)
 
@@ -54,7 +61,12 @@ clean:
 	rm -f doc/coq2html.ml doc/coq2html
 	rm -f extraction/*.ml extraction/*.mli
 
-.PHONY: proof extraction
+
+validator: glue.ml
+	$(OCAMLBUILD) $(OCB_OPTIONS) glue.native \
+        && rm -f validator && $(SLN) _build/glue.native validator
+
+.PHONY: proof extraction validator
 
 
 include .depend
