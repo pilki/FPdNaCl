@@ -1,1 +1,45 @@
-A quick attempt to prove the idea behind Google Native Client
+This project provide a proof of an "inner sandbox" in the way of the
+Google Nativ eClient project. It is fully implemented in Coq (except
+some 50 lines of OCaml glue). It can then be extracted to OCaml code
+and executed on "real" binary code.
+
+The code is (as much as possible) split between TCB (trusted code
+base) and NTCB (non trusted code base). The idea is that code in the
+NTCB directory does not need to be read to believe the validator,
+whereas the code in TCB should be carefully reviewed (it is important
+to note that when a theorem is in a file in the TCB directory, only
+its statement has to be trusted, the proof itself being checked by
+Coq)
+
+The final theorem, in ValidatorProp.v in
+
+  Theorem validator_dividable_no_danger:
+    forall ll, validate_program ll = true ->
+    forall st,
+      memory_compat_addr_ll header_size ll st.(state_mem) ->
+      dividable_by_32 st.(state_pc) ->
+      ~accessible_danger (N_of_nat (ll_length ll)) st.
+
+It says that for any state with a pc dividable by 32, the execution
+cannot reach a "bad state" if the validator returned true, and the
+initial memory contains the code that has been validated
+
+I tried to give a semantic as close to the machine as possible, with a
+memory that is a map from addresses to bytes, and the state of a
+machine with a memory and registers.
+
+Binary definition are given in Binary*.v
+Memory operations are described in Memory*.v
+
+The prerequisite on the semantic of assembly language and the
+resulting potential semantics for the programs are in Semantics and
+SemanticsProg
+
+The validator and its proof are in Validator (outside of the TCB), and
+the relevant theorems are re stated in ValidatorProp (in the TCB)
+
+A toy assembly language (showing that the prerequisite are realistic)
+is given in ASM.v
+
+Performance tests of the extracted validator show that on a Intel(R)
+Core(TM)2 Duo CPU E6850 @ 3.00GHz, the rate is around 400KB/s

@@ -62,27 +62,6 @@ let rec lasy_list_of_ic ic =
   with
   | End_of_file -> Coq_ll_nil
 
-
-(*  let buffer = String.create 512 in
-  let rec aux () =
-    let l = input ic buffer 0 512 in
-    if l = 0 then
-      Coq_ll_nil
-    else
-      let rec build n acc =
-        if n < 0 then
-          acc
-        else
-          build (pred n)
-            (Coq_ll_cons((byte_of_char buffer.[n]),
-                         Lazy.lazy_from_val(Lazy acc)))
-      in
-      build (l - 2)
-        (Coq_ll_cons ((byte_of_char buffer.[pred l]),
-                      (lazy (Lazy (aux())))))
-  in
-  aux ()*)
-
 let _ =
   if ASM.validate_program (lasy_list_of_ic stdin) then
     (print_string "ok!!\n"; exit 0)

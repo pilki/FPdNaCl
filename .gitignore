@@ -3,3 +3,6 @@
 .depend
 _build
 validator
+*.native
+*.tst
+callgrind*
