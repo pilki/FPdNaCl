@@ -274,6 +274,9 @@ Inductive byte: Type :=
 | BFF.
 
 
+(* the decidable equality on bytes is way too long to typecheck. It is
+   provided as an axiom *)
+
 Axiom byte_eq_dec: eq_dec byte.
 
 Extract Constant byte_eq_dec => "( = )".
