@@ -123,6 +123,14 @@ Definition N_of_byte (b: byte) : N:=
 Definition byte0 : byte := (HB0, HB0).
 
 
+Goal N_of_byte (HB0,HB0) = 0.
+  reflexivity. Qed.
+Goal N_of_byte (HB0,HB5) = 5.
+  reflexivity. Qed.
+Goal N_of_byte (HB2,HB4) = 36.
+  reflexivity. Qed.
+
+
 Definition concat_byte n (b: byte) :=
   translate_N_by_eight n + N_of_byte b.
 
@@ -143,6 +151,10 @@ Definition N_of_word w :=
       let n2 := concat_byte n3 b2 in
       concat_byte n2 b1
   end.
+
+(* 0xDEADBEEF *)
+Goal N_of_word (W (HBD,HBE) (HBA,HBD) (HBB, HBE) (HBE, HBF)) = 3735928559.
+  reflexivity. Qed.
 
 
 (* logical and *)

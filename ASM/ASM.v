@@ -82,31 +82,39 @@ Module Instruction : INSTRUCTION.
       | 〈〉 => None
         (* No op *)
       | (HB0, HB0) ::: _ => Some (Instr_noop, 1)
+
       | (HB0, HB1) ::: reg_code1 ::: b1 ::: b2 ::: b3 ::: b4 ::: reg_code2 ::: _ =>
         do reg1 <- reg_from_byte reg_code1;
         do reg2 <- reg_from_byte reg_code2;
           (* we assume a little endian processor *)
         Some (Instr_and reg1 (W b4 b3 b2 b1) reg2, 7)
+
       | (HB0, HB2) ::: reg_code1 ::: reg_code2 ::: _ =>
         do reg1 <- reg_from_byte reg_code1;
         do reg2 <- reg_from_byte reg_code2;
         Some (Instr_read reg1 reg2, 3)
+
       | (HB0, HB3) ::: reg_code1 ::: reg_code2 ::: _ =>
         do reg1 <- reg_from_byte reg_code1;
         do reg2 <- reg_from_byte reg_code2;
         Some (Instr_write reg1 reg2, 3)
+
       | (HB0, HB4) ::: b1 ::: b2 ::: b3 ::: b4 ::: _ =>
         Some (Instr_direct_jump (W b4 b3 b2 b1), 5)
+
       | (HB0, HB5) ::: reg_code1 ::: b1 ::: b2 ::: b3 ::: b4 ::: _ =>
         do reg1 <- reg_from_byte reg_code1;
           (* we assume a little endian processor *)
         Some (Instr_direct_cond_jump reg1 (W b4 b3 b2 b1), 6)
+
       | (HB0, HB6) ::: reg_code1 :::  _ =>
         do reg1 <- reg_from_byte reg_code1;
           (* we assume a little endian processor *)
         Some (Instr_indirect_jump reg1, 2)
+
       | (HB0, HB7) ::: _ =>
         Some (Instr_os_call (W byte0 byte0 byte0 byte0), 1)
+
       | _ => None
     end.
 
