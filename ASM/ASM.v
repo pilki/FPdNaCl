@@ -59,19 +59,15 @@ Module Instruction : INSTRUCTION.
   Open Scope nat_scope.
 
   Definition reg_from_byte (b:byte) : option register :=
-    match fst b with
-      | HB0 =>
-        match snd b with
-          | HB1 => Some (REG1)
-          | HB2 => Some (REG2)
-          | HB3 => Some (REG3)
-          | HB4 => Some (REG4)
-          | HB5 => Some (REG5)
-          | HB6 => Some (REG6)
-          | HB7 => Some (REG7)
-          | HB8 => Some (REG8)
-          | _ => None
-        end
+    match b with
+      | B01 => Some (REG1)
+      | B02 => Some (REG2)
+      | B03 => Some (REG3)
+      | B04 => Some (REG4)
+      | B05 => Some (REG5)
+      | B06 => Some (REG6)
+      | B07 => Some (REG7)
+      | B08 => Some (REG8)
       | _ => None
     end.
 
@@ -81,38 +77,38 @@ Module Instruction : INSTRUCTION.
     match ll with
       | 〈〉 => None
         (* No op *)
-      | (HB0, HB0) ::: _ => Some (Instr_noop, 1)
+      | B00 ::: _ => Some (Instr_noop, 1)
 
-      | (HB0, HB1) ::: reg_code1 ::: b1 ::: b2 ::: b3 ::: b4 ::: reg_code2 ::: _ =>
+      | B01 ::: reg_code1 ::: b1 ::: b2 ::: b3 ::: b4 ::: reg_code2 ::: _ =>
         do reg1 <- reg_from_byte reg_code1;
         do reg2 <- reg_from_byte reg_code2;
           (* we assume a little endian processor *)
         Some (Instr_and reg1 (W b4 b3 b2 b1) reg2, 7)
 
-      | (HB0, HB2) ::: reg_code1 ::: reg_code2 ::: _ =>
+      | B02 ::: reg_code1 ::: reg_code2 ::: _ =>
         do reg1 <- reg_from_byte reg_code1;
         do reg2 <- reg_from_byte reg_code2;
         Some (Instr_read reg1 reg2, 3)
 
-      | (HB0, HB3) ::: reg_code1 ::: reg_code2 ::: _ =>
+      | B03 ::: reg_code1 ::: reg_code2 ::: _ =>
         do reg1 <- reg_from_byte reg_code1;
         do reg2 <- reg_from_byte reg_code2;
         Some (Instr_write reg1 reg2, 3)
 
-      | (HB0, HB4) ::: b1 ::: b2 ::: b3 ::: b4 ::: _ =>
+      | B04 ::: b1 ::: b2 ::: b3 ::: b4 ::: _ =>
         Some (Instr_direct_jump (W b4 b3 b2 b1), 5)
 
-      | (HB0, HB5) ::: reg_code1 ::: b1 ::: b2 ::: b3 ::: b4 ::: _ =>
+      | B05 ::: reg_code1 ::: b1 ::: b2 ::: b3 ::: b4 ::: _ =>
         do reg1 <- reg_from_byte reg_code1;
           (* we assume a little endian processor *)
         Some (Instr_direct_cond_jump reg1 (W b4 b3 b2 b1), 6)
 
-      | (HB0, HB6) ::: reg_code1 :::  _ =>
+      | B06 ::: reg_code1 :::  _ =>
         do reg1 <- reg_from_byte reg_code1;
           (* we assume a little endian processor *)
         Some (Instr_indirect_jump reg1, 2)
 
-      | (HB0, HB7) ::: _ =>
+      | B07 ::: _ =>
         Some (Instr_os_call (W byte0 byte0 byte0 byte0), 1)
 
       | _ => None

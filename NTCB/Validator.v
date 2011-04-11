@@ -26,7 +26,7 @@ Require Import SemanticsProg.
 
 Module ValidatorCode (Import I: INSTRUCTION).
 
-  Definition proper_mask := W (HBF, HBF) (HBF, HBF) (HBF, HBF) (HBE, HB0).
+  Definition proper_mask := W BFF BFF BFF BE0.
 
   Definition id (n: nat) := n.
 

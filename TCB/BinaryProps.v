@@ -27,11 +27,8 @@ Lemma fst_byte_of_byte: forall b n,
   fst_byte (concat_byte n b) = (b, n).
 Proof.
   intros.
-  rewrite concat_byte_aux_correct.
-  destruct b as (hb2, hb1).
-  unfold fst_byte.
-  simpl.
-  repeat rewrite fst_four_bits_of_half_byte. reflexivity.
+  unfold fst_byte, concat_byte.
+  destruct n; destruct b; auto.
 Qed.
 
 Lemma word_of_word: forall w,
@@ -40,9 +37,18 @@ Proof.
   destruct w as [b4 b3 b2 b1].
   unfold word_of_N.
   simpl. repeat rewrite fst_byte_of_byte.
-  unfold fst_byte, N_of_byte.
-  rewrite fst_four_bits_of_half_byte.
-  destruct b4. simpl. destruct h; reflexivity.
+
+  assert (forall n b, translate_N_right_by 8 (concat_byte n b) = n) as REW1.
+  intros. destruct n; destruct b; auto.
+
+  repeat rewrite REW1.
+
+  assert (forall n b, byte_of_N (concat_byte n b) = b) as REW2.
+    intros; destruct n; destruct b; auto.
+
+  repeat rewrite REW2.
+  destruct b4; auto.
+
 Qed.
 
 Definition word_and w1 w2 :=
