@@ -27,7 +27,6 @@ Definition memory := N -> option byte.
 Definition header_size := 65536.
 
 (* classification of instructions *)
-
 Inductive instruction_classification (register:Type) : Type :=
   (* an instruction that only modifies register and memory, but does not jump *)
 | OK_instr: instruction_classification register
@@ -50,7 +49,7 @@ Implicit Arguments Invalid_instruction [[register]].
 
 Record state (register:Type) :=
   { state_mem: memory;
-    state_regs: register -> word;
+    state_regs: register -> word; (* the registers are a map from register to words *)
     state_pc: N}.
 Implicit Arguments state_mem [[register]].
 Implicit Arguments state_regs [[register]].
@@ -68,14 +67,18 @@ Inductive is_good_state {register}: instruction_target_state register -> Prop :=
 | Is_Good_State: forall state, is_good_state (Good_state state).
 
 
-
+(* what we expect from an assembly language *)
 Module Type INSTRUCTION.
 
+  (* a type of registers *)
   Parameter register: Type.
   Parameter register_eq_dec: forall r1 r2: register, {r1 = r2}+{r1 <> r2}.
+
+
+  (* a type of instructions *)
   Parameter instruction: Type.
 
-  (* parse an instruction *)
+  (* a way to parse an instruction *)
   Parameter parse_instruction: lazy_list byte -> option (instruction * nat).
 
   Parameter instr_max_size: nat.
@@ -97,23 +100,24 @@ Module Type INSTRUCTION.
     parse_instruction ll = Some (instr, n) -> (n <= instr_max_size)%nat.
 
 
+  (* a way to classify instructions *)
   Parameter classify_instruction: instruction -> instruction_classification register.
 
 
+
+  (* a semantic for instructions *)
   Parameter instruction_semantics: forall code_size:N, instruction ->
     state register -> instruction_target_state register -> Prop.
 
 
-  (* the first parameter is to indicate that the n first bytes of the memory
-     cannot be written *)
-
-
-  (* an instruction cannot write in the lower code segment *)
+  (* an instruction cannot write in the lower code segment (this
+     simulates the protections by segment on the x86 processor *)
   Parameter sem_no_overwrite: forall code_size instr st1 st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
     forall n', n' < header_size + code_size -> st1.(state_mem) n' = st2.(state_mem) n'.
 
-  (* the "good" instructions can get stuck but neverr lead to a "bad state" *)
+
+  (* the "good" instructions can get stuck but never lead to a "bad state" *)
 
   Parameter sem_not_invalid_not_bad: forall instr,
     classify_instruction instr <> Invalid_instruction ->
@@ -121,6 +125,7 @@ Module Type INSTRUCTION.
       ~ instruction_semantics code_size instr st Bad_state.
 
 
+  (* an OK instruction increases the pc by size_instr *)
   Parameter sem_OK_instr_pc: forall bm instr size,
     parse_instruction bm = Some (instr, size) ->
     classify_instruction instr = OK_instr ->
@@ -128,6 +133,7 @@ Module Type INSTRUCTION.
     instruction_semantics code_size instr st1 (Good_state st2) ->
     st2.(state_pc) = st1.(state_pc) + (N_of_nat size).
 
+  (* a Mask instruction increases the pc by size_instr *)
   Parameter sem_Mask_instr_pc: forall bm instr size,
     parse_instruction bm = Some (instr, size) ->
     forall reg w,
@@ -136,6 +142,7 @@ Module Type INSTRUCTION.
     instruction_semantics code_size instr st1 (Good_state st2) ->
     st2.(state_pc) = st1.(state_pc) + (N_of_nat size).
 
+  (* a Mask instruction mask the register *)
   Parameter sem_Mask_instr_reg: forall bm instr size,
     parse_instruction bm = Some (instr, size) ->
     forall reg w,
@@ -144,6 +151,10 @@ Module Type INSTRUCTION.
     instruction_semantics code_size instr st1 (Good_state st2) ->
     st2.(state_regs) reg = word_and w (st1.(state_regs) reg).
 
+
+  (* a Direct jump instruction increases the pc by size_instr of jump
+     to the address (this works for both conditional and unconditional
+     jumps )*)
 
   Parameter sem_Direct_jump_pc: forall bm instr size,
     parse_instruction bm = Some (instr, size) ->
@@ -154,6 +165,8 @@ Module Type INSTRUCTION.
     st2.(state_pc) = st1.(state_pc) + (N_of_nat size) \/
     st2.(state_pc) = N_of_word w.
 
+
+  (* an indirect jump can jump to the address in the register *)
   Parameter sem_Indirect_jump_pc: forall bm instr size,
     parse_instruction bm = Some (instr, size) ->
     forall reg,

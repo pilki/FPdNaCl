@@ -19,6 +19,18 @@ Notation "'option_bind' f oa" :=
   end) (at level 10, f at next level, oa at next level, only parsing).
 
 
+(* The basic idea of the do notation is that when you write
+
+   do x <- an expression;
+   another expression
+
+   if "an expression" returns None, the hole thing returns None
+
+   if "an expression" returns Some v, x is bound to v, and "another
+   expression is evaluated
+*)
+
+
 Notation "'do' '_' '<-' A ; B" :=
   (option_bind (fun _ => B) (A))
    (at level 200, A at level 100, B at level 200, format

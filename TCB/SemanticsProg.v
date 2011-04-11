@@ -52,7 +52,12 @@ Qed.
 
 
 
-(* Define the semantics of programs, parameterized by those of instruction *)
+(* Define the semantics of programs, parameterized by those of instruction
+
+   It is more the set of acceptable semantics than really the
+   semantics, as we will see later *)
+
+
 Module Prog_Semantics (Import I: INSTRUCTION).
 
   Module M := Mem(I).
@@ -66,9 +71,13 @@ Module Prog_Semantics (Import I: INSTRUCTION).
 
 
   Inductive step (code_size: N) (st1: state register): target_state -> Prop :=
+
   | Step_good: forall instr n st2,
+    (* if we are in the code *)
     in_code code_size st1 ->
+    (* we read the instruction *)
     read_instr_from_memory st1.(state_mem) st1.(state_pc) = Some (instr, n) ->
+    (* and execute it *)
     instruction_semantics (header_size + code_size) instr st1 (Good_state st2) ->
     (* we allow any modification of the memory outside of the code
        segment because of multi threading *)
@@ -77,26 +86,34 @@ Module Prog_Semantics (Import I: INSTRUCTION).
       (Normal_state {| state_mem := m2';
                        state_pc := st2.(state_pc);
                        state_regs :=st2.(state_regs) |})
-    (* if no instruction can be read, something wrong is hapening *)
+
   | Step_cannot_read_instr:
     in_code code_size st1 ->
+    (* if no instruction can be read, something wrong is hapening *)
     read_instr_from_memory st1.(state_mem) st1.(state_pc) = None ->
     step code_size st1 DANGER_STATE
-    (* if we can read an instruction, and its execution goes wrong, it is wrong *)
+
   | Step_bad: forall instr n,
     in_code code_size st1 ->
+    (* if we can read an instruction *)
     read_instr_from_memory st1.(state_mem) st1.(state_pc) = Some (instr, n) ->
+    (* but its execution goes wrong, it is wrong *)
     instruction_semantics code_size instr st1 Bad_state ->
     step code_size st1 DANGER_STATE
 
     (* if we are in the header, it must be at a correct address *)
   | Step_header_bad:
-    st1.(state_pc) < header_size -> ~dividable_by_32 st1.(state_pc) ->
+    st1.(state_pc) < header_size ->
+    ~dividable_by_32 st1.(state_pc) ->
     step code_size st1 DANGER_STATE
 
-    (* if the address in the header is correct, we can jump anywhere in the code *)
+    (* if the address in the header is correct, we can jump anywhere
+       in the code (this simulate a jump in the library code, follow by a
+       return in the code to an address *previously masked* )*)
+
   | Step_header_good:
-    st1.(state_pc) < header_size -> dividable_by_32 st1.(state_pc) ->
+    st1.(state_pc) < header_size ->
+    dividable_by_32 st1.(state_pc) ->
     forall m2 regs2 pc2,
       same_code code_size st1.(state_mem) m2 ->
       dividable_by_32 pc2 ->
@@ -114,7 +131,10 @@ Module Prog_Semantics (Import I: INSTRUCTION).
     accessible_state code_size st2 st3 ->
     accessible_state code_size st1 st3.
 
-  (* is DANGER_STATE accessible from a state ? *)
+
+  (* is DANGER_STATE accessible from a state? This is what we *really*
+  want to avoid!*)
+
   Inductive accessible_danger (code_size: N) (st1: state register) : Prop :=
   | AD_one_step:
     step code_size st1 DANGER_STATE ->

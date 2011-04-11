@@ -30,20 +30,43 @@ Module ValidatorCode (Import I: INSTRUCTION).
 
   Definition id (n: nat) := n.
 
+  (* function to validate a 32 bytes block. It takes as an argument
+  the current valid_addresses (a set of addresses where we already
+  found an instruction), the current to_be_checked_addresses (the set
+  of addresses where an instruction might jump) and the list of
+  bytes *)
+
   Function validate_n_byte (n: nat) (addr: N)
     (valid_addresses to_be_checked_addresses: NSet) (ll: lazy_list byte)
     {measure id n}: option (NSet * NSet * lazy_list byte):=
     match n with
+      (* we are done with the validation of this block *)
       | O => Some (valid_addresses, to_be_checked_addresses, ll)
-      | _ =>
+
+      | _ => (* the do notation is defined in DoOption.  *)
+
+        (* we parse the instruction *)
         do (instr, size_instr) <- parse_instruction ll;
+        (* and get the list without the byte used for this instruction *)
         do ll' <- ll_safe_drop size_instr ll;
+        (* and the number of byte left to validate *)
         do n' <- safe_minus n size_instr;
+
         let addr' := addr + (N_of_nat size_instr) in
         match classify_instruction instr with
+
+          (* for a normal instruction, we just add the current address
+             in the valid addresses *)
           | OK_instr =>
             validate_n_byte n' addr'
               (Nadd addr valid_addresses) to_be_checked_addresses ll'
+
+          (* for a mask instruction: if the mask is not the
+             "proper_mask", we treat it as a normal instruction. But
+             if it is equal, we look at the next instruction to see if
+             it is a indirect jump, to check if we have the pseudo
+             instruction of guarded indirect jump*)
+
           | Mask_instr reg1 w =>
             match word_eq_dec w proper_mask with
               | left _ =>
@@ -61,6 +84,7 @@ Module ValidatorCode (Import I: INSTRUCTION).
                             let addr'' := addr' + (N_of_nat size_instr') in
                             validate_n_byte n'' addr''
                               (Nadd addr valid_addresses) to_be_checked_addresses ll''
+                          (* an indirect jump that was not properly masked *)
                           | right _ => None
                         end
                       | _ =>
@@ -74,12 +98,15 @@ Module ValidatorCode (Import I: INSTRUCTION).
             end
           | Direct_jump w =>
             let dest_addr := N_of_word w in
+            (* a direct jump to an address that is dividable by 32 is always ok *)
             if dividable_by_32_dec dest_addr then
               validate_n_byte n' addr'
                 (Nadd addr valid_addresses) to_be_checked_addresses ll'
+            (* a direct jump to an already valid address is ok *)
             else if is_Nin dest_addr valid_addresses then
               validate_n_byte n' addr'
                 (Nadd addr valid_addresses) to_be_checked_addresses ll'
+            (* if it is not, we postpone the checking of the validity of this address *)
             else
               validate_n_byte n' addr' (Nadd addr valid_addresses)
                 (Nadd dest_addr to_be_checked_addresses) ll'
@@ -161,6 +188,7 @@ Module ValidatorCode (Import I: INSTRUCTION).
   Function validate_ll_list (addr: N)
     (valid_addresses to_be_checked_addresses: NSet) (ll: lazy_list byte)
     {measure ll_length ll}: option (NSet * NSet):=
+    (* to validate a list, we repeatedly validate 32 byte blocks *)
     do (valid_addresses', to_be_checked_addresses', ll') <-
       validate_n_byte 32 addr valid_addresses to_be_checked_addresses ll;
     match ll' with
@@ -176,6 +204,8 @@ Module ValidatorCode (Import I: INSTRUCTION).
   Qed.
 
   Definition validate_program ll :=
+    (* to validate the program, we finally check the addresses left
+       (the forward jumps) *)
     match validate_ll_list header_size Nempty Nempty ll with
       | None => false
       | Some (valid_addresses, to_be_checked_addresses) =>

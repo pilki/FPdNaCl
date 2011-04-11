@@ -20,6 +20,9 @@ Require Import Program.
 Require Export List.
 Open Scope bool_scope.
 
+
+Ltac omega' := zify; omega.
+
 Ltac inv H := inversion H; clear H; try subst.
 Definition eq_dec (X: Type):= forall (x1 x2:X), {x1 = x2}+{x1 <> x2}.
 

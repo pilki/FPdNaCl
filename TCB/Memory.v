@@ -21,10 +21,8 @@ Require Import Semantics.
 Require Import DoOption.
 
 
-(* LIB*)
-Ltac omega' := zify; omega.
-
-
+(* specifies that the content of the memory, starting at address addr,
+   is the content of the list. It basically means that we are executing the code *)
 
 Definition memory_compat_addr_ll addr ll (mem: memory):=
   forall n, (n < ll_length ll)%nat -> ll_nth n ll = mem (addr + N_of_nat n).
@@ -76,7 +74,11 @@ Module Mem(Import I : INSTRUCTION).
   Definition read_instr_from_memory (mem: memory) (pc: N): option (instruction * nat) :=
     parse_instruction (build_list_from_memory instr_max_size pc mem).
 
-  Lemma memory_compat_read_instr addr ll mem:
+
+  (* reading from memory is the same as parsing instruction when the
+  memory is compatible with the list *)
+
+  Theorem memory_compat_read_instr addr ll mem:
     memory_compat_addr_ll addr ll mem ->
     forall instr size_instr,
       parse_instruction ll = Some (instr, size_instr) ->
@@ -130,7 +132,7 @@ Module Mem(Import I : INSTRUCTION).
 
 
 
-  (* parse an instruction *)
+  (* two memories with the same code segment *)
   Definition same_code (code_size: N) (mem1 mem2: memory): Prop:=
     forall n, n < header_size + code_size -> mem1 n = mem2 n.
 
@@ -154,10 +156,6 @@ Module Mem(Import I : INSTRUCTION).
   Qed.
 
   Hint Resolve memory_compat_same_code same_code_trans.
-
-
-  Definition in_code (code_size: N) (st: state register) :=
-    header_size <= st.(state_pc) /\ st.(state_pc) < header_size + code_size.
 
 
   Lemma same_code_read_instr (mem1 mem2: memory) next_addr addr:
@@ -185,5 +183,8 @@ Module Mem(Import I : INSTRUCTION).
       erewrite IHsize_instr; eauto. omega'.
   Qed.
   Hint Resolve same_code_read_instr.
+
+  Definition in_code (code_size: N) (st: state register) :=
+    header_size <= st.(state_pc) /\ st.(state_pc) < header_size + code_size.
 
 End Mem.
