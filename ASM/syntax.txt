@@ -1,0 +1,40 @@
+The toy assembly language works on words of 32 bits through its 8
+registers (from 1 to 8). It has a little endian representation of
+integers. It only has few instructions (but of variable size) and is
+not even turing complete (you currently cannot write any program in it
+in fact)
+
+No op:
+opcode: 0
+
+logical and
+opcode: 1
+source register (one byte)
+mask (1 word, little endian)
+target register (one byte)
+
+memory read
+opcode: 2
+register with the source address (one byte)
+register where to store the result of the read (one byte)
+
+memory write
+opcode 3
+register with the content (one byte)
+register with the destination address (one byte)
+
+direct jump
+opcode 4
+address (one word)
+
+direct conditional jump
+opcode 5
+register to test (one byte)
+address (one word)
+
+indirect jump
+opcode 6
+register containing the destination address (one byte)
+
+a bad instruction (OS call)
+opcode 7
