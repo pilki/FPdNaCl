@@ -27,7 +27,7 @@ Notation "'option_bind' f oa" :=
    if "an expression" returns None, the hole thing returns None
 
    if "an expression" returns Some v, x is bound to v, and "another
-   expression is evaluated
+   expression" is evaluated
 *)
 
 

@@ -1,0 +1,14 @@
+To check the proofs and compile this project, you will need:
+
+* The ocaml compiler http://caml.inria.fr/ocaml/index.en.html
+
+* The coq proof assistant (version at least 8.3) http://coq.inria.fr
+
+* the cases tactic (https://github.com/pilki/cases)
+
+Once the cases tactic is downloaded and compiled, modify Makefile.conf
+to indicate its path
+
+"make all" will then check the proofs, extract the OCaml code and
+compile it to build the simpl "validator" executable.
+

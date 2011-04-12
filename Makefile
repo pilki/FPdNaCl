@@ -1,8 +1,9 @@
 DIRS=TCB NTCB ASM
 
 INCLUDES=$(patsubst %,-I %, $(DIRS))
+include Makefile.conf
 
-COQLIBS:=-I ~/devel/cases/src -R ~/devel/cases/theories Case_Tactics
+COQLIBS=-I $(CASES_TAC)/src -R $(CASES_TAC)/theories Case_Tactics
 
 COQC=coqc -q $(INCLUDES) $(COQLIBS)
 COQDEP=coqdep $(INCLUDES) $(COQLIBS)
@@ -31,7 +32,6 @@ NTCB=NSet.v Lib.v BinaryAux.v Validator.v DoOption.v ValidatorProof.v
 TCB=BinaryDefs.v BinaryProps.v Semantics.v SemanticsProg.v LazyList.v ValidatorProp.v Memory.v Byte.v
 ASM=ASM.v
 
-EXTRACTION=extraction.v
 
 FILES=$(NTCB) $(TCB) $(ASM)
 
@@ -65,6 +65,13 @@ clean:
 validator: glue.ml
 	$(OCAMLBUILD) $(OCB_OPTIONS) glue.native \
         && rm -f validator && $(SLN) _build/glue.native validator
+
+all:
+	$(MAKE) proof
+	$(MAKE) extraction
+	$(MAKE) validator
+
+
 
 .PHONY: proof extraction validator
 
