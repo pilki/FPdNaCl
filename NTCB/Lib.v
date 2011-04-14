@@ -358,20 +358,75 @@ Qed.
 
 Hint Rewrite remove_some: clean.
 
+Local Open Scope N_scope.
 
-
-Fixpoint safe_minus (m n : nat) :=
-  match m, n with
-    | _, O => Some m
-    | O, S _ => None
-    | S m', S n' => safe_minus m' n'
+Definition safe_minus (n m : N): option N :=
+  match n with
+    | 0 =>
+      match m with
+        | 0 => Some 0
+        | _ => None
+      end
+    | Npos n' =>
+      match m with
+        | 0%N => Some n
+        | Npos m' =>
+          match Pminus_mask n' m' with
+            | IsNul => Some 0%N
+            | IsPos p => Some (Npos p)
+            | IsNeg => None
+          end
+      end
   end.
 
-Lemma safe_minus_correct: forall m n p, safe_minus m n = Some p ->
-  m  = (n + p)%nat.
+
+Lemma safe_minus_inf_is_some: forall n m,
+  m <= n -> is_some (safe_minus n m).
 Proof.
-  induction' m as [|m']; simpl; intros; destruct' n as [|n']; clean; try congruence; eauto.
-  simpl. f_equal. eauto.
+  intros.
+  assert ( m = n \/ n > m) as SPLIT. omega'. clear H.
+  destruct SPLIT as [H | H].
+  Case "m = n".
+    subst. unfold safe_minus.
+    destruct n; auto.
+    rewrite Pminus_mask_diag; auto.
+
+  Case "m <> n".
+    unfold Nlt in H.
+    unfold safe_minus.
+    destruct n; destruct m; auto; simpl in H.
+      inv H.
+
+    apply Pminus_mask_Gt in H.
+    decompose [and ex] H.
+    rewrite H1. auto.
+Qed.
+
+Lemma safe_minus_sup_is_None: forall n m,
+  n < m -> safe_minus n m = None.
+Proof.
+  intros.
+  unfold Nlt in H.
+  unfold safe_minus.
+  destruct n; destruct m; auto; simpl in H; try solve [inv H].
+  rewrite Pminus_mask_Lt; auto.
+Qed.
+
+
+Lemma safe_minus_correct: forall n m p, safe_minus n m = Some p ->
+  n  = (m + p).
+Proof.
+
+  intros.
+
+  assert ((n - m) = p).
+  unfold Nminus, safe_minus in *.
+  destruct n; destruct m; clean.
+  destruct (Pminus_mask p0 p1); clean.
+
+  assert (~(n < m)) by (intro INF; apply safe_minus_sup_is_None in INF; congruence).
+  assert (m <= n) by omega'.
+  omega'.
 Qed.
 
 

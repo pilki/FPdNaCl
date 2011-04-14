@@ -36,23 +36,21 @@ Module ValidatorCode (Import I: INSTRUCTION).
   of addresses where an instruction might jump) and the list of
   bytes *)
 
-  Function validate_n_byte (n: nat) (addr: N)
+  Function validate_n_byte (n: N) (addr: N)
     (valid_addresses to_be_checked_addresses: NSet) (ll: lazy_list byte)
-    {measure id n}: option (NSet * NSet * lazy_list byte):=
+    {measure nat_of_N n}: option (NSet * NSet * lazy_list byte):=
     match n with
       (* we are done with the validation of this block *)
-      | O => Some (valid_addresses, to_be_checked_addresses, ll)
+      | N0 => Some (valid_addresses, to_be_checked_addresses, ll)
 
       | _ => (* the do notation is defined in DoOption.  *)
 
         (* we parse the instruction *)
-        do (instr, size_instr) <- parse_instruction ll;
-        (* and get the list without the byte used for this instruction *)
-        do ll' <- ll_safe_drop size_instr ll;
+        do (instr, size_instr, ll') <- parse_instruction ll;
         (* and the number of byte left to validate *)
         do n' <- safe_minus n size_instr;
 
-        let addr' := addr + (N_of_nat size_instr) in
+        let addr' := addr + size_instr in
         match classify_instruction instr with
 
           (* for a normal instruction, we just add the current address
@@ -72,16 +70,15 @@ Module ValidatorCode (Import I: INSTRUCTION).
               | left _ =>
                 (* if we are masking with the right mask, we check the next instruction*)
                 match n' with
-                  | O => Some (Nadd addr valid_addresses, to_be_checked_addresses, ll')
+                  | N0 => Some (Nadd addr valid_addresses, to_be_checked_addresses, ll')
                   | _ =>
-                    do (instr', size_instr') <- parse_instruction ll';
+                    do (instr', size_instr', ll'') <- parse_instruction ll';
                     match classify_instruction instr' with
                       | Indirect_jump reg2 => (* an indirect jump *)
                         match register_eq_dec reg1 reg2 with
                           | left _ => (* the proper register *)
-                            do ll'' <- ll_safe_drop size_instr' ll';
                             do n'' <- safe_minus n' size_instr';
-                            let addr'' := addr' + (N_of_nat size_instr') in
+                            let addr'' := addr' + size_instr' in
                             validate_n_byte n'' addr''
                               (Nadd addr valid_addresses) to_be_checked_addresses ll''
                           (* an indirect jump that was not properly masked *)
@@ -126,7 +123,7 @@ Module ValidatorCode (Import I: INSTRUCTION).
       match goal with
         | H: safe_minus _ _ = _ |- _ =>
           apply safe_minus_correct in H
-      end; subst; unfold id; omega.
+      end; subst; unfold id; abstract omega'.
     solve_case.
     solve_case.
     solve_case.
@@ -138,7 +135,7 @@ Module ValidatorCode (Import I: INSTRUCTION).
     solve_case.
     solve_case.
   Qed.
- 
+
   Ltac fun_ind_validate_n_byte_with call :=
     functional induction call;
       [ fst_Case_tac "fun_ind_validate_n_byte 1"
@@ -156,9 +153,7 @@ Module ValidatorCode (Import I: INSTRUCTION).
       | fst_Case_tac "fun_ind_validate_n_byte 13"
       | fst_Case_tac "fun_ind_validate_n_byte 14"
       | fst_Case_tac "fun_ind_validate_n_byte 15"
-      | fst_Case_tac "fun_ind_validate_n_byte 16"
-      | fst_Case_tac "fun_ind_validate_n_byte 17"
-      | fst_Case_tac "fun_ind_validate_n_byte 18"].
+      | fst_Case_tac "fun_ind_validate_n_byte 16"].
 
   Ltac fun_ind_validate_n_byte :=
     match goal with
@@ -167,21 +162,23 @@ Module ValidatorCode (Import I: INSTRUCTION).
           (validate_n_byte n a va tbca ll)
     end.
 
+  Require Import Memory.
   Lemma validate_n_byte_reduces_size_by_n:
     forall n addr valid_addresses to_be_checked_addresses ll
       valid_addresses' to_be_checked_addresses' ll',
       validate_n_byte n addr valid_addresses to_be_checked_addresses ll =
       Some (valid_addresses', to_be_checked_addresses', ll') ->
-      ll_length ll = (n + ll_length ll')%nat.
+      ll_length ll = (nat_of_N n + ll_length ll')%nat.
   Proof.
     intros ? ? ? ? ? ?.
+
     fun_ind_validate_n_byte;
       intros; clean;
         try (specialize (IHo _ _ H));
-        apply ll_safe_drop_size in  e2;
-          apply safe_minus_correct in e3; try omega.
-    apply ll_safe_drop_size in e11. apply safe_minus_correct in e12.
-    subst. omega.
+        apply parse_instruction_drops in e0; symmetry in e0; apply ll_safe_drop_size in e0;
+        apply safe_minus_correct in e2; try omega'.
+    apply parse_instruction_drops in e6; symmetry in e6; apply ll_safe_drop_size in e6;
+    apply safe_minus_correct in e10; try omega'.
   Qed.
 
 

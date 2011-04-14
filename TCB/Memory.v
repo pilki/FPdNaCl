@@ -52,9 +52,55 @@ Qed.
 
 
 
+Lemma csi_1: forall n1 n2,
+  N_of_nat n1 >= N_of_nat n2 -> (n1 >= n2)%nat.
+Proof. intros; omega'. Qed.
+
+Lemma csi_2: forall n1 n2,
+  N_of_nat n1 <= N_of_nat n2 -> (n1 <= n2)%nat.
+Proof. intros; omega'. Qed.
+
+
+Ltac change_size_instr size_instr :=
+  let size_instr' := fresh size_instr "'" in
+  rename size_instr into size_instr';
+  remember (nat_of_N size_instr') as size_instr;
+  replace size_instr' with (N_of_nat size_instr) in * by omega';
+  match goal with
+    | Heqsize_instr: size_instr = nat_of_N (N_of_nat size_instr) |- _ =>
+      clear Heqsize_instr
+  end;
+  repeat match goal with
+           | H : _ |- _ => apply csi_1 in H
+         end;
+  repeat match goal with
+           | H : _ |- _ => apply csi_2 in H
+         end;
+  clear size_instr'.
+
+Ltac inv_opt' :=
+    match goal with
+      | H : match ?X with
+              | Some _ => _
+              | None => _
+            end = Some _ |- _ =>
+    case_eq X; intros;
+      match goal with
+        | HEQ : X = _ |- _ =>
+          rewrite HEQ in H; simpl in *; inv H; auto
+      end
+  end.
+
+
+
 Hint Resolve memory_compat_addr_ll_drop memory_compat_addr_ll_cons.
 
 Module Mem(Import I : INSTRUCTION).
+Ltac destr_parse_instr_only_read :=
+    match goal with
+      | |- context[parse_instruction ?ll2] =>
+        edestruct parse_instruction_only_read with (ll' := ll2) as [? REW]; eauto;[|rewrite REW; auto]
+    end.
 
 
   (* to read an instruction in memory, we build a list of maximal size
@@ -71,40 +117,46 @@ Module Mem(Import I : INSTRUCTION).
         end
     end.
 
-  Definition read_instr_from_memory (mem: memory) (pc: N): option (instruction * nat) :=
-    parse_instruction (build_list_from_memory instr_max_size pc mem).
+  Definition read_instr_from_memory (mem: memory) (pc: N): option (instruction * N) :=
+    do (instr, size, _) <- parse_instruction (build_list_from_memory (nat_of_N instr_max_size) pc mem);
+    Some (instr, size).
 
 
   (* reading from memory is the same as parsing instruction when the
   memory is compatible with the list *)
 
+
   Theorem memory_compat_read_instr addr ll mem:
     memory_compat_addr_ll addr ll mem ->
-    forall instr size_instr,
-      parse_instruction ll = Some (instr, size_instr) ->
+    forall instr size_instr rst_ll,
+      parse_instruction ll = Some (instr, size_instr, rst_ll) ->
       read_instr_from_memory mem addr = Some (instr, size_instr).
   Proof.
     intros COMPAT * PARSE.
     unfold read_instr_from_memory.
     remember instr_max_size as ims.
-    assert (size_instr <= ims)%nat.
+    assert (size_instr <= ims).
       subst. eapply size_instr_inf_max_size; eauto.
     clear Heqims.
-    eapply parse_instruction_only_read; eauto.
+
+    destr_parse_instr_only_read.
+
     apply parse_instruction_do_read in PARSE.
+
+    change_size_instr size_instr.
+    change_size_instr ims.
 
     assert (is_some (ll_safe_take size_instr ll)).
     clear - PARSE. revert size_instr PARSE.
     induction' ll as [| b ll']; simpl; intros.
     Case "@ll_nil".
-      replace size_instr with O in * by omega. simpl. constructor.
+      replace size_instr with O in * by omega'. simpl. constructor.
     Case "ll_cons b ll'".
       destruct size_instr.
       simpl. constructor.
-      assert (ll_length ll' >= size_instr)%nat by omega.
+      assert (ll_length ll' >= size_instr)%nat by omega'.
       specialize (IHll' _ H). inv IHll'.
       simpl. rewrite <- H1. constructor.
-
 
     revert dependent ims. revert addr mem COMPAT instr size_instr PARSE H0.
     induction' ll as [| b ll']; simpl; intros.
@@ -161,15 +213,28 @@ Module Mem(Import I : INSTRUCTION).
   Lemma same_code_read_instr (mem1 mem2: memory) next_addr addr:
     (forall addr : N, addr < next_addr -> mem1 addr = mem2 addr) ->
     forall instr size_instr,
-      addr + N_of_nat size_instr <= next_addr ->
+      addr + size_instr <= next_addr ->
       read_instr_from_memory mem1 addr = Some (instr, size_instr) ->
       read_instr_from_memory mem2 addr = Some (instr, size_instr).
   Proof.
     unfold read_instr_from_memory. intros SAME * INF READ.
-    eapply parse_instruction_only_read; eauto.
+
+    match goal with
+      | H : match ?X with
+              | Some _ => _
+              | None => None
+            end = Some _ |- _ =>
+      destruct X as [[[]]|] _eqn; clean
+    end.
+    destr_parse_instr_only_read.
+
+
+
 (*    pose proof READ.*)
 (*    apply parse_instruction_do_read in READ.*)
-    remember instr_max_size as ims. clear Heqims. clear READ.
+    remember instr_max_size as ims. clear Heqims. clear Heqo.
+    change_size_instr size_instr. change_size_instr ims.
+
     revert dependent ims. revert dependent addr. clear instr.
     induction' size_instr as [|size_instr]; intros.
     Case "0%nat".
@@ -182,6 +247,7 @@ Module Mem(Import I : INSTRUCTION).
       destruct (mem1 addr); auto.
       erewrite IHsize_instr; eauto. omega'.
   Qed.
+
   Hint Resolve same_code_read_instr.
 
   Definition in_code (code_size: N) (st: state register) :=

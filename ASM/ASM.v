@@ -72,49 +72,49 @@ Module Instruction : INSTRUCTION.
     end.
 
 
-
-  Function parse_instruction (ll: lazy_list byte) : option (instruction * nat):=
+  Open Scope N_scope.
+  Function parse_instruction (ll: lazy_list byte) : option (instruction * N * lazy_list byte):=
     match ll with
       | 〈〉 => None
         (* No op *)
-      | B00 ::: _ => Some (Instr_noop, 1)
+      | B00 ::: rst_ll=> Some (Instr_noop, 1, rst_ll)
 
-      | B01 ::: reg_code1 ::: b1 ::: b2 ::: b3 ::: b4 ::: reg_code2 ::: _ =>
+      | B01 ::: reg_code1 ::: b1 ::: b2 ::: b3 ::: b4 ::: reg_code2 ::: rst_ll=>
         do reg1 <- reg_from_byte reg_code1;
         do reg2 <- reg_from_byte reg_code2;
           (* we assume a little endian processor *)
-        Some (Instr_and reg1 (W b4 b3 b2 b1) reg2, 7)
+        Some (Instr_and reg1 (W b4 b3 b2 b1) reg2, 7, rst_ll)
 
-      | B02 ::: reg_code1 ::: reg_code2 ::: _ =>
+      | B02 ::: reg_code1 ::: reg_code2 ::: rst_ll=>
         do reg1 <- reg_from_byte reg_code1;
         do reg2 <- reg_from_byte reg_code2;
-        Some (Instr_read reg1 reg2, 3)
+        Some (Instr_read reg1 reg2, 3, rst_ll)
 
-      | B03 ::: reg_code1 ::: reg_code2 ::: _ =>
+      | B03 ::: reg_code1 ::: reg_code2 ::: rst_ll=>
         do reg1 <- reg_from_byte reg_code1;
         do reg2 <- reg_from_byte reg_code2;
-        Some (Instr_write reg1 reg2, 3)
+        Some (Instr_write reg1 reg2, 3, rst_ll)
 
-      | B04 ::: b1 ::: b2 ::: b3 ::: b4 ::: _ =>
-        Some (Instr_direct_jump (W b4 b3 b2 b1), 5)
+      | B04 ::: b1 ::: b2 ::: b3 ::: b4 ::: rst_ll=>
+        Some (Instr_direct_jump (W b4 b3 b2 b1), 5, rst_ll)
 
-      | B05 ::: reg_code1 ::: b1 ::: b2 ::: b3 ::: b4 ::: _ =>
+      | B05 ::: reg_code1 ::: b1 ::: b2 ::: b3 ::: b4 ::: rst_ll=>
         do reg1 <- reg_from_byte reg_code1;
           (* we assume a little endian processor *)
-        Some (Instr_direct_cond_jump reg1 (W b4 b3 b2 b1), 6)
+        Some (Instr_direct_cond_jump reg1 (W b4 b3 b2 b1), 6, rst_ll)
 
-      | B06 ::: reg_code1 :::  _ =>
+      | B06 ::: reg_code1 :::  rst_ll=>
         do reg1 <- reg_from_byte reg_code1;
           (* we assume a little endian processor *)
-        Some (Instr_indirect_jump reg1, 2)
+        Some (Instr_indirect_jump reg1, 2, rst_ll)
 
-      | B07 ::: _ =>
-        Some (Instr_os_call (W byte0 byte0 byte0 byte0), 1)
+      | B07 ::: rst_ll=>
+        Some (Instr_os_call (W byte0 byte0 byte0 byte0), 1, rst_ll)
 
       | _ => None
     end.
 
-  Definition instr_max_size: nat := 7.
+  Definition instr_max_size: N := 7.
 
   Ltac fun_ind_parse_instr_with call :=
     functional induction call;
@@ -146,13 +146,21 @@ Module Instruction : INSTRUCTION.
         fun_ind_parse_instr_with (parse_instruction ll)
     end.
 
-
-  Lemma parse_instruction_do_read:
-    forall ll instr n, parse_instruction ll = Some (instr, n) ->
-    (ll_length ll >= n)%nat.
+  Lemma parse_instruction_drops:
+    forall ll instr n rst_ll, parse_instruction ll = Some (instr, n, rst_ll) ->
+    Some rst_ll = ll_safe_drop (nat_of_N n) ll.
   Proof.
     intros.
-    fun_ind_parse_instr; simpl; clean; try omega.
+    fun_ind_parse_instr; simpl; clean.
+  Qed.
+
+
+  Lemma parse_instruction_do_read:
+    forall ll instr n rst_ll, parse_instruction ll = Some (instr, n, rst_ll) ->
+    N_of_nat (ll_length ll) >= n.
+  Proof.
+    intros.
+    fun_ind_parse_instr; simpl; clean; try omega'.
   Qed.
 
   Lemma inv_ll_cons: forall X (x1:X) l1 x2 l2,
@@ -162,37 +170,37 @@ Module Instruction : INSTRUCTION.
 
 
   Lemma parse_instruction_only_read:
-    forall ll instr n, parse_instruction ll = Some (instr, n) ->
+    forall ll instr n rst_ll, parse_instruction ll = Some (instr, n, rst_ll) ->
     forall ll',
-      ll_safe_take n ll' = ll_safe_take n ll ->
-      parse_instruction ll' = Some (instr, n).
+      ll_safe_take (nat_of_N n) ll' = ll_safe_take (nat_of_N n) ll ->
+      exists rst_ll', parse_instruction ll' = Some (instr, n, rst_ll').
   Proof.
     intros.
-    fun_ind_parse_instr; simpl in *; clean; simpl in *;    
+    fun_ind_parse_instr; clean; simpl in *;
     repeat match goal with
       | H : context [match ?l with
                        | ll_nil => _
                        | ll_cons _ _ => _
                      end] |- _ =>
       destruct l as [|? []]; clean
-    end; simpl in *; try (rewrite e0); try (rewrite e1); auto.
+    end; simpl; try rewrite e0; try rewrite e1; eexists; eauto.
   Qed.
-    
 
-  Lemma size_instr_not_0: forall ll instr n,
-    parse_instruction ll = Some (instr, n) -> n <> O.
+
+  Lemma size_instr_not_0: forall ll instr n rst_ll,
+    parse_instruction ll = Some (instr, n, rst_ll) -> n <> 0.
   Proof.
     intros.
-    fun_ind_parse_instr; simpl in *; clean; simpl in *; auto.
+    fun_ind_parse_instr; clean; simpl in *; omega'.
   Qed.
 
-  Lemma size_instr_inf_max_size: forall ll instr n,
-    parse_instruction ll = Some (instr, n) -> (n <= instr_max_size)%nat.
+
+  Lemma size_instr_inf_max_size: forall ll instr n rst_ll,
+    parse_instruction ll = Some (instr, n, rst_ll) -> n <= instr_max_size.
   Proof.
-    unfold instr_max_size. intros.
-    fun_ind_parse_instr; simpl in *; clean; simpl in *; auto;omega.
+    intros. unfold instr_max_size.
+    fun_ind_parse_instr; clean; simpl in *; omega'.
   Qed.
-
 
   Definition classify_instruction instr :=
     match instr with
@@ -346,24 +354,24 @@ Open Scope N_scope.
     inv H0. simpl in H. congruence.
   Qed.
 
-  Lemma sem_OK_instr_pc: forall bm instr size,
-    parse_instruction bm = Some (instr, size) ->
+  Lemma sem_OK_instr_pc: forall bm instr size rst_ll,
+    parse_instruction bm = Some (instr, size, rst_ll) ->
     classify_instruction instr = OK_instr ->
     forall code_size st1 st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
-    st2.(state_pc) = st1.(state_pc) + (N_of_nat size).
+    st2.(state_pc) = st1.(state_pc) + size.
   Proof.
     intros.
     fun_ind_parse_instr; clean; inv H1; try reflexivity; inv H0.
   Qed.
 
-  Lemma sem_Mask_instr_pc: forall bm instr size,
-    parse_instruction bm = Some (instr, size) ->
+  Lemma sem_Mask_instr_pc: forall bm instr size rst_ll,
+    parse_instruction bm = Some (instr, size, rst_ll) ->
     forall reg w,
     classify_instruction instr = Mask_instr reg w->
     forall code_size st1 st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
-    st2.(state_pc) = st1.(state_pc) + (N_of_nat size).
+    st2.(state_pc) = st1.(state_pc) + size.
   Proof.
     intros.
     fun_ind_parse_instr; clean; try inv H0.
@@ -372,8 +380,8 @@ Open Scope N_scope.
 
 
 
-  Lemma sem_Mask_instr_reg: forall bm instr size,
-    parse_instruction bm = Some (instr, size) ->
+  Lemma sem_Mask_instr_reg: forall bm instr size rst_ll,
+    parse_instruction bm = Some (instr, size, rst_ll) ->
     forall reg w,
     classify_instruction instr = Mask_instr reg w->
     forall code_size st1 st2,
@@ -390,13 +398,13 @@ Open Scope N_scope.
     inv H0.
   Qed.
 
-  Lemma sem_Direct_jump_pc: forall bm instr size,
-    parse_instruction bm = Some (instr, size) ->
+  Lemma sem_Direct_jump_pc: forall bm instr size rst_ll,
+    parse_instruction bm = Some (instr, size, rst_ll) ->
     forall w,
     classify_instruction instr = Direct_jump w ->
     forall code_size st1 st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
-    st2.(state_pc) = st1.(state_pc) + (N_of_nat size) \/
+    st2.(state_pc) = st1.(state_pc) + size \/
     st2.(state_pc) = N_of_word w.
   Proof.
     intros.
@@ -410,13 +418,13 @@ Open Scope N_scope.
   Qed.
     
 
-  Lemma sem_Indirect_jump_pc: forall bm instr size,
-    parse_instruction bm = Some (instr, size) ->
+  Lemma sem_Indirect_jump_pc: forall bm instr size rst_ll,
+    parse_instruction bm = Some (instr, size, rst_ll) ->
     forall reg,
     classify_instruction instr = Indirect_jump reg ->
     forall code_size st1 st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
-    st2.(state_pc) = st1.(state_pc) + (N_of_nat size) \/
+    st2.(state_pc) = st1.(state_pc) + size \/
     st2.(state_pc) = N_of_word (st1.(state_regs) reg).
   Proof.
     intros.
