@@ -348,7 +348,7 @@ Module ValProof (Import I : INSTRUCTION).
     ok_addr next_addr valid_addresses to_be_checked_addresses addr ->
     ok_addr next_addr' valid_addresses' to_be_checked_addresses' addr.
   Proof.
-    intros. inv H3; eauto.
+    intros. inv H3; eauto with nset.
   Qed.
 
   Local Hint Resolve ok_addr_bigger.
@@ -924,6 +924,12 @@ Module ValProof (Import I : INSTRUCTION).
       end; try solve_and_proper.
   Qed.
 
+  Hint Extern 1 =>
+    match goal with
+      H: In_NSet _ Nempty |- _ => apply Nempty_empty in H; inv H
+    end: nset.
+
+
   Lemma almost_there: forall ll code_size valid_addresses to_be_checked_addresses,
     validate_ll_list header_size Nempty Nempty ll
       = Some (valid_addresses, to_be_checked_addresses) ->
@@ -1022,7 +1028,7 @@ Module ValProof (Import I : INSTRUCTION).
    SCase "OA_Valid".
      right; right; repeat split; eauto.
    SCase "OK_checked".
-     right; right; repeat split; eauto.
+     right; right; repeat split; eauto with nset.
      eapply validate_ll_list_correct_addr; eauto with nset.
    SCase "OK_next".
      right; left; omega'.
