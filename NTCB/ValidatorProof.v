@@ -263,7 +263,8 @@ Module ValProof (Import I : INSTRUCTION).
       SCase "addr <> addr'".
         destruct H as [xaddr H].
         destruct H3 as [xaddr' H3]. subst.
-        apply IHo. omega'.
+        apply IHo. unfold_Nvals. omega'.
+        unfold_Nvals.
         replace 32 with (N_of_nat 32) by reflexivity.
         rewrite <- Nplus_assoc. rewrite <- N_of_plus.
         erewrite <- ll_safe_drop_size; eauto.

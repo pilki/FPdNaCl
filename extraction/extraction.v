@@ -13,7 +13,15 @@
  * General Public License for more details. *)
 
 Require Import ExtrOcamlBasic.
+Require Import ExtrOcamlZInt64.
 Require ASM.
+Require SemanticsProg.
+Require Import Lib.
+
+Extract Constant safe_minus => "MyInt64.safe_minus".
+
+Extract Constant SemanticsProg.dividable_by_32_dec
+  => "MyInt64.dividable_by_32_dec".
 
 (* Go! *)
 Cd "extraction".

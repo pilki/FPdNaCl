@@ -301,6 +301,7 @@ let rec lasy_list_of_ic ic =
   | End_of_file -> Coq_ll_nil
 
 let _ =
+  Printf.printf "lets run\n%!";
   if ASM.validate_program (lasy_list_of_ic stdin) then
     (print_string "ok!!\n"; exit 0)
   else

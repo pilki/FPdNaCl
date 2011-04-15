@@ -22,6 +22,8 @@ Require Import Memory.
 Require Export DoOption.
 Require Import Validator.
 
+Ltac omega' := unfold_Nvals; zify; omega.
+
 (* a toy assembly language *)
 
 Module Instruction : INSTRUCTION.
@@ -77,44 +79,44 @@ Module Instruction : INSTRUCTION.
     match ll with
       | 〈〉 => None
         (* No op *)
-      | B00 ::: rst_ll=> Some (Instr_noop, 1, rst_ll)
+      | B00 ::: rst_ll=> Some (Instr_noop, Nval_1, rst_ll)
 
       | B01 ::: reg_code1 ::: b1 ::: b2 ::: b3 ::: b4 ::: reg_code2 ::: rst_ll=>
         do reg1 <- reg_from_byte reg_code1;
         do reg2 <- reg_from_byte reg_code2;
           (* we assume a little endian processor *)
-        Some (Instr_and reg1 (W b4 b3 b2 b1) reg2, 7, rst_ll)
+        Some (Instr_and reg1 (W b4 b3 b2 b1) reg2, Nval_7, rst_ll)
 
       | B02 ::: reg_code1 ::: reg_code2 ::: rst_ll=>
         do reg1 <- reg_from_byte reg_code1;
         do reg2 <- reg_from_byte reg_code2;
-        Some (Instr_read reg1 reg2, 3, rst_ll)
+        Some (Instr_read reg1 reg2, Nval_3, rst_ll)
 
       | B03 ::: reg_code1 ::: reg_code2 ::: rst_ll=>
         do reg1 <- reg_from_byte reg_code1;
         do reg2 <- reg_from_byte reg_code2;
-        Some (Instr_write reg1 reg2, 3, rst_ll)
+        Some (Instr_write reg1 reg2, Nval_3, rst_ll)
 
       | B04 ::: b1 ::: b2 ::: b3 ::: b4 ::: rst_ll=>
-        Some (Instr_direct_jump (W b4 b3 b2 b1), 5, rst_ll)
+        Some (Instr_direct_jump (W b4 b3 b2 b1), Nval_5, rst_ll)
 
       | B05 ::: reg_code1 ::: b1 ::: b2 ::: b3 ::: b4 ::: rst_ll=>
         do reg1 <- reg_from_byte reg_code1;
           (* we assume a little endian processor *)
-        Some (Instr_direct_cond_jump reg1 (W b4 b3 b2 b1), 6, rst_ll)
+        Some (Instr_direct_cond_jump reg1 (W b4 b3 b2 b1), Nval_6, rst_ll)
 
       | B06 ::: reg_code1 :::  rst_ll=>
         do reg1 <- reg_from_byte reg_code1;
           (* we assume a little endian processor *)
-        Some (Instr_indirect_jump reg1, 2, rst_ll)
+        Some (Instr_indirect_jump reg1, Nval_2, rst_ll)
 
       | B07 ::: rst_ll=>
-        Some (Instr_os_call (W byte0 byte0 byte0 byte0), 1, rst_ll)
+        Some (Instr_os_call (W byte0 byte0 byte0 byte0), Nval_1, rst_ll)
 
       | _ => None
     end.
 
-  Definition instr_max_size: N := 7.
+  Definition instr_max_size: N := Nval_7.
 
   Ltac fun_ind_parse_instr_with call :=
     functional induction call;

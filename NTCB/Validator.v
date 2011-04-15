@@ -187,11 +187,11 @@ Module ValidatorCode (Import I: INSTRUCTION).
     {measure ll_length ll}: option (NSet * NSet):=
     (* to validate a list, we repeatedly validate 32 byte blocks *)
     do (valid_addresses', to_be_checked_addresses', ll') <-
-      validate_n_byte 32 addr valid_addresses to_be_checked_addresses ll;
+      validate_n_byte Nval_32 addr valid_addresses to_be_checked_addresses ll;
     match ll' with
       | 〈〉 => Some (valid_addresses', to_be_checked_addresses')
       | _ =>
-        validate_ll_list (addr + 32) valid_addresses' to_be_checked_addresses' ll'
+        validate_ll_list (addr + Nval_32) valid_addresses' to_be_checked_addresses' ll'
     end.
   Proof.
     intros.
