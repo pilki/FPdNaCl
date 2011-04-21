@@ -46,7 +46,7 @@ Module ValidatorCode (Import I: INSTRUCTION).
       | _ => (* the do notation is defined in DoOption.  *)
 
         (* we parse the instruction *)
-        do (instr, size_instr, ll') <- parse_instruction ll;
+        do (instr, size_instr, ll') <- parse_instruction addr ll;
         (* and the number of byte left to validate *)
         do n' <- safe_minus n size_instr;
 
@@ -72,7 +72,7 @@ Module ValidatorCode (Import I: INSTRUCTION).
                 match n' with
                   | N0 => Some (Nadd addr valid_addresses, to_be_checked_addresses, ll')
                   | _ =>
-                    do (instr', size_instr', ll'') <- parse_instruction ll';
+                    do (instr', size_instr', ll'') <- parse_instruction addr' ll';
                     match classify_instruction instr' with
                       | Indirect_jump reg2 => (* an indirect jump *)
                         match register_eq_dec reg1 reg2 with
@@ -116,7 +116,7 @@ Module ValidatorCode (Import I: INSTRUCTION).
     intros;
     repeat
       match goal with
-        | H : parse_instruction _ = Some _ |- _ =>
+        | H : parse_instruction _ _ = Some _ |- _ =>
           apply size_instr_not_0 in H
       end;
     repeat

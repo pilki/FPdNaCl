@@ -98,8 +98,8 @@ Hint Resolve memory_compat_addr_ll_drop memory_compat_addr_ll_cons.
 Module Mem(Import I : INSTRUCTION).
 Ltac destr_parse_instr_only_read :=
     match goal with
-      | |- context[parse_instruction ?ll2] =>
-        edestruct parse_instruction_only_read with (ll' := ll2) as [? REW]; eauto;[|rewrite REW; auto]
+      | |- context[parse_instruction ?addr ?ll2] =>
+        edestruct parse_instruction_only_read with (pc:= addr) (ll' := ll2) as [? REW]; eauto;[|rewrite REW; auto]
     end.
 
 
@@ -118,7 +118,7 @@ Ltac destr_parse_instr_only_read :=
     end.
 
   Definition read_instr_from_memory (mem: memory) (pc: N): option (instruction * N) :=
-    do (instr, size, _) <- parse_instruction (build_list_from_memory (nat_of_N instr_max_size) pc mem);
+    do (instr, size, _) <- parse_instruction pc (build_list_from_memory (nat_of_N instr_max_size) pc mem);
     Some (instr, size).
 
 
@@ -129,7 +129,7 @@ Ltac destr_parse_instr_only_read :=
   Theorem memory_compat_read_instr addr ll mem:
     memory_compat_addr_ll addr ll mem ->
     forall instr size_instr rst_ll,
-      parse_instruction ll = Some (instr, size_instr, rst_ll) ->
+      parse_instruction addr ll = Some (instr, size_instr, rst_ll) ->
       read_instr_from_memory mem addr = Some (instr, size_instr).
   Proof.
     intros COMPAT * PARSE.
