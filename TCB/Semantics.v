@@ -78,31 +78,31 @@ Module Type INSTRUCTION.
   (* a type of instructions *)
   Parameter instruction: Type.
 
-  (* a way to parse an instruction *)
-  Parameter parse_instruction: lazy_list byte -> option (instruction * N * lazy_list byte).
+  (* a way to parse an instruction, from the currect pc and a list of bytes *)
+  Parameter parse_instruction: N -> lazy_list byte -> option (instruction * N * lazy_list byte).
 
   Parameter instr_max_size: N.
 
   Parameter parse_instruction_drops:
-    forall ll instr n rst_ll, parse_instruction ll = Some (instr, n, rst_ll) ->
+    forall pc ll instr n rst_ll, parse_instruction pc ll = Some (instr, n, rst_ll) ->
     Some rst_ll = ll_safe_drop (nat_of_N n) ll.
 
 
   Parameter parse_instruction_do_read:
-    forall ll instr n rst_ll, parse_instruction ll = Some (instr, n, rst_ll) ->
+    forall pc ll instr n rst_ll, parse_instruction pc ll = Some (instr, n, rst_ll) ->
     N_of_nat (ll_length ll) >= n.
 
   Parameter parse_instruction_only_read:
-    forall ll instr n rst_ll, parse_instruction ll = Some (instr, n, rst_ll) ->
+    forall pc ll instr n rst_ll, parse_instruction pc ll = Some (instr, n, rst_ll) ->
     forall ll',
       ll_safe_take (nat_of_N n) ll' = ll_safe_take (nat_of_N n) ll ->
-      exists rst_ll', parse_instruction ll' = Some (instr, n, rst_ll').
+      exists rst_ll', parse_instruction pc ll' = Some (instr, n, rst_ll').
 
-  Parameter size_instr_not_0: forall ll instr n rst_ll,
-    parse_instruction ll = Some (instr, n, rst_ll) -> n <> 0.
+  Parameter size_instr_not_0: forall pc ll instr n rst_ll,
+    parse_instruction pc ll = Some (instr, n, rst_ll) -> n <> 0.
 
-  Parameter size_instr_inf_max_size: forall ll instr n rst_ll,
-    parse_instruction ll = Some (instr, n, rst_ll) -> n <= instr_max_size.
+  Parameter size_instr_inf_max_size: forall pc ll instr n rst_ll,
+    parse_instruction pc ll = Some (instr, n, rst_ll) -> n <= instr_max_size.
 
 
   (* a way to classify instructions *)
@@ -131,28 +131,28 @@ Module Type INSTRUCTION.
 
 
   (* an OK instruction increases the pc by size_instr *)
-  Parameter sem_OK_instr_pc: forall bm instr size rst_ll,
-    parse_instruction bm = Some (instr, size, rst_ll) ->
+  Parameter sem_OK_instr_pc: forall st1 ll instr size rst_ll,
+    parse_instruction st1.(state_pc) ll = Some (instr, size, rst_ll) ->
     classify_instruction instr = OK_instr ->
-    forall code_size st1 st2,
+    forall code_size st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
     st2.(state_pc) = st1.(state_pc) + size.
 
   (* a Mask instruction increases the pc by size_instr *)
-  Parameter sem_Mask_instr_pc: forall bm instr size rst_ll,
-    parse_instruction bm = Some (instr, size, rst_ll) ->
+  Parameter sem_Mask_instr_pc: forall st1 ll instr size rst_ll,
+    parse_instruction st1.(state_pc) ll = Some (instr, size, rst_ll) ->
     forall reg w,
     classify_instruction instr = Mask_instr reg w->
-    forall code_size st1 st2,
+    forall code_size st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
     st2.(state_pc) = st1.(state_pc) +  size.
 
   (* a Mask instruction mask the register *)
-  Parameter sem_Mask_instr_reg: forall bm instr size rst_ll,
-    parse_instruction bm = Some (instr, size, rst_ll) ->
+  Parameter sem_Mask_instr_reg: forall st1 ll instr size rst_ll,
+    parse_instruction st1.(state_pc) ll = Some (instr, size, rst_ll) ->
     forall reg w,
     classify_instruction instr = Mask_instr reg w->
-    forall code_size st1 st2,
+    forall code_size st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
     st2.(state_regs) reg = word_and w (st1.(state_regs) reg).
 
@@ -161,22 +161,22 @@ Module Type INSTRUCTION.
      to the address (this works for both conditional and unconditional
      jumps )*)
 
-  Parameter sem_Direct_jump_pc: forall bm instr size rst_ll,
-    parse_instruction bm = Some (instr, size, rst_ll) ->
+  Parameter sem_Direct_jump_pc: forall st1 ll instr size rst_ll,
+    parse_instruction st1.(state_pc) ll = Some (instr, size, rst_ll) ->
     forall w,
     classify_instruction instr = Direct_jump w ->
-    forall code_size st1 st2,
+    forall code_size st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
     st2.(state_pc) = st1.(state_pc) + size \/
     st2.(state_pc) = N_of_word w.
 
 
   (* an indirect jump can jump to the address in the register *)
-  Parameter sem_Indirect_jump_pc: forall bm instr size rst_ll,
-    parse_instruction bm = Some (instr, size, rst_ll) ->
+  Parameter sem_Indirect_jump_pc: forall st1 ll instr size rst_ll,
+    parse_instruction st1.(state_pc) ll = Some (instr, size, rst_ll) ->
     forall reg,
     classify_instruction instr = Indirect_jump reg ->
-    forall code_size st1 st2,
+    forall code_size st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
     st2.(state_pc) = st1.(state_pc) + size \/
     st2.(state_pc) = N_of_word (st1.(state_regs) reg).

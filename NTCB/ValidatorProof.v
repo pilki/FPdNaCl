@@ -77,7 +77,7 @@ Module ValProof (Import I : INSTRUCTION).
     pose_mark;
     repeat
     match goal with
-      | H: parse_instruction _ = Some _ |- _ =>
+      | H: parse_instruction _ _ = Some _ |- _ =>
         let H' := fresh H "'" in
         pose proof H as H'; revert H';
         apply parse_instruction_drops in H; symmetry in H; apply ll_safe_drop_size in H
@@ -230,6 +230,7 @@ Module ValProof (Import I : INSTRUCTION).
 
     fun_ind_validate_n_byte; clean_post_fun_ind_validate; rewrite nat_of_Nplus;
       try (specialize (IHo VALIDATE); omega').
+
     Case "fun_ind_validate_n_byte 3".
     simpl in *. omega'.
   Qed.
@@ -550,9 +551,9 @@ Module ValProof (Import I : INSTRUCTION).
   Local Hint Resolve HELPER1 HELPER2 memory_compat_read_instr.
 
 
-  Lemma memory_compat_parse_instruction: forall ll instr size_instr rst_ll,
-    parse_instruction ll = Some (instr, size_instr, rst_ll) ->
-    forall addr mem,
+  Lemma memory_compat_parse_instruction: forall ll instr size_instr rst_ll addr,
+    parse_instruction addr ll = Some (instr, size_instr, rst_ll) ->
+    forall mem,
     memory_compat_addr_ll addr ll mem ->
     memory_compat_addr_ll (addr + size_instr) rst_ll mem.
   Proof.
@@ -1042,8 +1043,8 @@ Module ValProof (Import I : INSTRUCTION).
      inv H9; clean_read.
      unfold read_instr_from_memory in READ_FROM_MEM.
      match type of READ_FROM_MEM with
-       | context[parse_instruction ?LL] =>
-         destruct (parse_instruction LL) as [[[]]|] _eqn; clean
+       | context[parse_instruction ?ADDR ?LL] =>
+         destruct (parse_instruction ADDR LL) as [[[]]|] _eqn; clean
      end.
      destruct' (classify_instruction instr) as [] _eqn; try congruence.
      SSCase "@OK_instr".
@@ -1087,11 +1088,12 @@ Module ValProof (Import I : INSTRUCTION).
 
              unfold read_instr_from_memory in H10.
              match type of H10 with
-               | context[parse_instruction ?LL] =>
-                 destruct (parse_instruction LL) as [[[]]|] _eqn; clean
+               | context[parse_instruction ?ADDR ?LL] =>
+                 destruct (parse_instruction ADDR LL) as [[[]]|] _eqn; clean
              end.
 
              edestruct sem_Indirect_jump_pc with (instr:=instr'); eauto; instantiate; clean_state.
+             eapply Heqo0.
              subst. eapply OK_DANGER with (n' := n) (m := m2'0); eauto.
              subst. clear H11.
              eapply OK_DANGER with (n' := n) (m := m2'0) (4 := H12); eauto.

@@ -73,7 +73,7 @@ Module Instruction : INSTRUCTION.
 
 
   Open Scope N_scope.
-  Function parse_instruction (ll: lazy_list byte) : option (instruction * N * lazy_list byte):=
+  Function parse_instruction (addr: N) (ll: lazy_list byte) : option (instruction * N * lazy_list byte):=
     match ll with
       | 〈〉 => None
         (* No op *)
@@ -140,14 +140,14 @@ Module Instruction : INSTRUCTION.
 
   Ltac fun_ind_parse_instr :=
     match goal with
-      | H: context[ parse_instruction ?ll] |- _ =>
-        fun_ind_parse_instr_with (parse_instruction ll)
-      | |- context[ parse_instruction ?ll] =>
-        fun_ind_parse_instr_with (parse_instruction ll)
+      | H: context[ parse_instruction ?addr ?ll] |- _ =>
+        fun_ind_parse_instr_with (parse_instruction addr ll)
+      | |- context[ parse_instruction ?addr ?ll] =>
+        fun_ind_parse_instr_with (parse_instruction addr ll)
     end.
 
   Lemma parse_instruction_drops:
-    forall ll instr n rst_ll, parse_instruction ll = Some (instr, n, rst_ll) ->
+    forall pc ll instr n rst_ll, parse_instruction pc ll = Some (instr, n, rst_ll) ->
     Some rst_ll = ll_safe_drop (nat_of_N n) ll.
   Proof.
     intros.
@@ -156,7 +156,7 @@ Module Instruction : INSTRUCTION.
 
 
   Lemma parse_instruction_do_read:
-    forall ll instr n rst_ll, parse_instruction ll = Some (instr, n, rst_ll) ->
+    forall pc ll instr n rst_ll, parse_instruction pc ll = Some (instr, n, rst_ll) ->
     N_of_nat (ll_length ll) >= n.
   Proof.
     intros.
@@ -170,10 +170,10 @@ Module Instruction : INSTRUCTION.
 
 
   Lemma parse_instruction_only_read:
-    forall ll instr n rst_ll, parse_instruction ll = Some (instr, n, rst_ll) ->
+    forall pc ll instr n rst_ll, parse_instruction pc ll = Some (instr, n, rst_ll) ->
     forall ll',
       ll_safe_take (nat_of_N n) ll' = ll_safe_take (nat_of_N n) ll ->
-      exists rst_ll', parse_instruction ll' = Some (instr, n, rst_ll').
+      exists rst_ll', parse_instruction pc ll' = Some (instr, n, rst_ll').
   Proof.
     intros.
     fun_ind_parse_instr; clean; simpl in *;
@@ -187,16 +187,16 @@ Module Instruction : INSTRUCTION.
   Qed.
 
 
-  Lemma size_instr_not_0: forall ll instr n rst_ll,
-    parse_instruction ll = Some (instr, n, rst_ll) -> n <> 0.
+  Lemma size_instr_not_0: forall pc ll instr n rst_ll,
+    parse_instruction pc ll = Some (instr, n, rst_ll) -> n <> 0.
   Proof.
     intros.
     fun_ind_parse_instr; clean; simpl in *; omega'.
   Qed.
 
 
-  Lemma size_instr_inf_max_size: forall ll instr n rst_ll,
-    parse_instruction ll = Some (instr, n, rst_ll) -> n <= instr_max_size.
+  Lemma size_instr_inf_max_size: forall pc ll instr n rst_ll,
+    parse_instruction pc ll = Some (instr, n, rst_ll) -> n <= instr_max_size.
   Proof.
     intros. unfold instr_max_size.
     fun_ind_parse_instr; clean; simpl in *; omega'.
@@ -354,10 +354,10 @@ Open Scope N_scope.
     inv H0. simpl in H. congruence.
   Qed.
 
-  Lemma sem_OK_instr_pc: forall bm instr size rst_ll,
-    parse_instruction bm = Some (instr, size, rst_ll) ->
+  Lemma sem_OK_instr_pc: forall st1 ll instr size rst_ll,
+    parse_instruction st1.(state_pc) ll = Some (instr, size, rst_ll) ->
     classify_instruction instr = OK_instr ->
-    forall code_size st1 st2,
+    forall code_size st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
     st2.(state_pc) = st1.(state_pc) + size.
   Proof.
@@ -365,13 +365,13 @@ Open Scope N_scope.
     fun_ind_parse_instr; clean; inv H1; try reflexivity; inv H0.
   Qed.
 
-  Lemma sem_Mask_instr_pc: forall bm instr size rst_ll,
-    parse_instruction bm = Some (instr, size, rst_ll) ->
+  Lemma sem_Mask_instr_pc: forall st1 ll instr size rst_ll,
+    parse_instruction st1.(state_pc) ll = Some (instr, size, rst_ll) ->
     forall reg w,
     classify_instruction instr = Mask_instr reg w->
-    forall code_size st1 st2,
+    forall code_size st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
-    st2.(state_pc) = st1.(state_pc) + size.
+    st2.(state_pc) = st1.(state_pc) +  size.
   Proof.
     intros.
     fun_ind_parse_instr; clean; try inv H0.
@@ -380,11 +380,11 @@ Open Scope N_scope.
 
 
 
-  Lemma sem_Mask_instr_reg: forall bm instr size rst_ll,
-    parse_instruction bm = Some (instr, size, rst_ll) ->
+  Lemma sem_Mask_instr_reg: forall st1 ll instr size rst_ll,
+    parse_instruction st1.(state_pc) ll = Some (instr, size, rst_ll) ->
     forall reg w,
     classify_instruction instr = Mask_instr reg w->
-    forall code_size st1 st2,
+    forall code_size st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
     st2.(state_regs) reg = word_and w (st1.(state_regs) reg).
   Proof.
@@ -398,11 +398,11 @@ Open Scope N_scope.
     inv H0.
   Qed.
 
-  Lemma sem_Direct_jump_pc: forall bm instr size rst_ll,
-    parse_instruction bm = Some (instr, size, rst_ll) ->
+  Lemma sem_Direct_jump_pc: forall st1 ll instr size rst_ll,
+    parse_instruction st1.(state_pc) ll = Some (instr, size, rst_ll) ->
     forall w,
     classify_instruction instr = Direct_jump w ->
-    forall code_size st1 st2,
+    forall code_size st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
     st2.(state_pc) = st1.(state_pc) + size \/
     st2.(state_pc) = N_of_word w.
@@ -418,11 +418,11 @@ Open Scope N_scope.
   Qed.
     
 
-  Lemma sem_Indirect_jump_pc: forall bm instr size rst_ll,
-    parse_instruction bm = Some (instr, size, rst_ll) ->
+  Lemma sem_Indirect_jump_pc: forall st1 ll instr size rst_ll,
+    parse_instruction st1.(state_pc) ll = Some (instr, size, rst_ll) ->
     forall reg,
     classify_instruction instr = Indirect_jump reg ->
-    forall code_size st1 st2,
+    forall code_size st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
     st2.(state_pc) = st1.(state_pc) + size \/
     st2.(state_pc) = N_of_word (st1.(state_regs) reg).
