@@ -12,11 +12,13 @@ COQEXEC=coqtop $(INCLUDES) $(COQLIBS) -batch -load-vernac-source
 
 
 OCAMLBUILD=ocamlbuild
+OCB_INCLUDES=-I extraction $(INCLUDES)
+OCB_QUICK_INCLUDES=-I extraction $(INCLUDES)
 OCB_OPTIONS=\
   -j 2 \
   -no-hygiene \
-  -no-links \
-  -I extraction $(INCLUDES)
+  -no-links
+
 
 ifneq (,$(findstring CYGWIN,$(shell uname -s)))
 SLN=cp
@@ -63,7 +65,11 @@ clean:
 
 
 validator: glue.ml
-	$(OCAMLBUILD) $(OCB_OPTIONS) glue.native \
+	$(OCAMLBUILD) $(OCB_OPTIONS) $(OCB_INCLUDES) glue.native \
+        && rm -f validator && $(SLN) _build/glue.native validator
+
+quick_validator: glue.ml
+	$(OCAMLBUILD) $(OCB_OPTIONS) $(OCB_QUICK_INCLUDES) glue.native \
         && rm -f validator && $(SLN) _build/glue.native validator
 
 all:
@@ -73,7 +79,7 @@ all:
 
 
 
-.PHONY: proof extraction validator
+.PHONY: proof extraction validator quick_validator
 
 
 include .depend
