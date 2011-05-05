@@ -165,7 +165,7 @@ Ltac destr_parse_instr_only_read :=
       reflexivity.
     Case "ll_cons b ll'".
       destruct' size_instr.
-      SCase "0%nat".
+      SCase "O".
         reflexivity.
       SCase "S".
         destruct ims; [elimtype False; omega|].
@@ -237,7 +237,7 @@ Ltac destr_parse_instr_only_read :=
 
     revert dependent ims. revert dependent addr. clear instr.
     induction' size_instr as [|size_instr]; intros.
-    Case "0%nat".
+    Case "O".
       simpl. reflexivity.
     Case "S size_instr".
       simpl.

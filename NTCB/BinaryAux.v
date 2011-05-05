@@ -348,7 +348,7 @@ Qed.
 Lemma translate_P_plus: forall t1 t2 p, translate_P_by t1 (translate_P_by t2 p) = translate_P_by (t1 + t2) p.
 Proof.
   induction' t1 as [|t1']; simpl; intros.
-  Case "0%nat".
+  Case "O".
     destruct (translate_P_by t2 p); auto.
   Case "S t1'".
     repeat rewrite translate_P_xO. f_equal.
@@ -430,7 +430,7 @@ Lemma translate_P_and: forall t p1 p2, (exists p1', p1 = translate_P_by t p1') -
   exists p', p = translate_P_by t p'.
 Proof.
   induction' t as [|t]; intros * EXISTS * SOME.
-  Case "0%nat".
+  Case "O".
     simpl. eauto.
   Case "S t".
     destruct EXISTS as [p1' Hp1'].
@@ -453,7 +453,7 @@ Proof.
       edestruct IHt; eauto. exists x. rewrite translate_P_tilde_0. congruence.
     SCase "xO p2".
       edestruct IHt; eauto. exists x. rewrite translate_P_tilde_0. congruence.
-    SCase "1%positive".
+    SCase "xH".
       destruct (bool_list_of_P (translate_P_by t p1')); inv Heqo.
 Qed.
 
@@ -464,7 +464,7 @@ Proof.
   intros.
   destruct' n1 as [|pos1]; destruct' n2 as [|pos2]; unfold N_and; simpl;
     try solve [exists 0; rewrite translate_0_by; reflexivity].
-  Case "Npos pos1"; SCase "0".
+  Case "Npos pos1"; SCase "N0".
     exists 0. simpl.
     destruct (bool_list_of_P pos1); reflexivity.
   Case "Npos pos1"; SCase "Npos pos2".
