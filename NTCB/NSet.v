@@ -71,7 +71,7 @@ Proof.
     destruct ps; try congruence; eauto with nset.
   Case "xO".
     destruct ps; try congruence; eauto with nset.
-  Case "1%positive".
+  Case "xH".
     destruct ps; destruct b; eauto with nset; congruence.
 Qed.
 
@@ -242,7 +242,7 @@ Lemma is_Nin_NIn: forall n ns, is_Nin n ns = true -> In_NSet n ns.
 Proof.
   intros.
   destruct' n; simpl in H; destruct ns as (b, ps).
-  Case "0%N".
+  Case "N0".
     destruct b; simpl in H; auto with nset; congruence.
   Case "Npos".
     simpl in H. apply is_Pin_PIn in H. auto with nset.
