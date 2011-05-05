@@ -13,7 +13,7 @@ COQEXEC=coqtop $(INCLUDES) $(COQLIBS) -batch -load-vernac-source
 
 OCAMLBUILD=ocamlbuild
 OCB_INCLUDES=-I extraction $(INCLUDES)
-OCB_QUICK_INCLUDES=-I extraction $(INCLUDES)
+OCB_QUICK_INCLUDES=-I quick_extraction $(INCLUDES)
 OCB_OPTIONS=\
   -j 2 \
   -no-hygiene \
