@@ -995,7 +995,7 @@ Module ValProof (Import I : INSTRUCTION).
     apply (lt_wf_ind n). clear n.
     intros n IND_HYP st DANGER SAME CORRECT.
     destruct' n as [|n]; inv DANGER.
-    Case "0%nat".
+    Case "O".
       decompose [and or] CORRECT.
       SCase "inf".
         inv H; eauto; inv H0; omega'.
@@ -1074,7 +1074,7 @@ Module ValProof (Import I : INSTRUCTION).
          unfold same_code in H5.
          apply H5. omega'.*)
          destruct' n as [|n].
-         S4Case "0%nat".
+         S4Case "O".
            inv H1.
            inv H5; clean_state; try clean_read; try omega'.
            eapply sem_not_invalid_not_bad; eauto; congruence.

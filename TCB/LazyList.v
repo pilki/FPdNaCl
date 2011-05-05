@@ -93,8 +93,6 @@ Fixpoint ll_safe_drop {X} (n: nat) (ll: lazy_list X) :=
       end
   end.
 
-Recursive Extraction Nrect.
-
   (* to lib *)
 Lemma ll_safe_drop_nth {X}: forall n (ll: lazy_list X) ll',
   ll_safe_drop n ll = Some ll' ->
