@@ -1,3 +1,12 @@
+For quick installation, just run (needs ocaml, not coq)
+make quick_validator
+
+To run the tests, first compile the assembly
+cd assembly; ocamlbuild asm.native
+the tests are in test/oktests and test/notoktests
+
+The validator expects the binary file to be sent on its stdin
+
 To check the proofs and compile this project, you will need:
 
 * The ocaml compiler http://caml.inria.fr/ocaml/index.en.html
