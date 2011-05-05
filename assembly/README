@@ -1,0 +1,2 @@
+To compile to little assembly:
+ocamlbuild asm.native
