@@ -304,4 +304,4 @@ let _ =
   if ASM.validate_program (lasy_list_of_ic stdin) then
     (print_string "ok!!\n"; exit 0)
   else
-    (print_string "PAS ok!!\n"; exit 1)
+    (print_string "NOT ok!!\n"; exit 1)

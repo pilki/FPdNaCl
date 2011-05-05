@@ -16,6 +16,9 @@ let output_string_int32 oc str =
 let output_reg oc str =
   Scanf.sscanf str "%%%i" (output_byte oc)
 
+(* the code must be of size multiple of 32 *)
+let size = ref 0
+let add_size i = size := !size + i
 }
 
 let hex_char = ['0'-'9''a'-'f''A'-'F']
@@ -32,6 +35,15 @@ rule asm oc = parse
 
 | start_line "nop" endline
 { output_byte oc 0;
+  add_size 1;
+  asm oc lexbuf}
+
+| start_line "nop" spaces (int32_str as nbr) endline
+{ let nbr = int_of_string nbr in
+  for i = 1 to nbr do
+    output_byte oc 0
+  done;
+  add_size nbr;
   asm oc lexbuf}
 
 | start_line
@@ -43,6 +55,7 @@ rule asm oc = parse
   output_reg oc reg1;
   output_string_int32 oc mask;
   output_reg oc reg2;
+  add_size 7;
   asm oc lexbuf
 }
 
@@ -51,6 +64,7 @@ rule asm oc = parse
     (register as reg2) endline
 { output_byte oc 2;
   output_reg oc reg1; output_reg oc reg2;
+  add_size 3;
   asm oc lexbuf}
 
 | start_line
@@ -58,12 +72,14 @@ rule asm oc = parse
     (register as reg2) endline
 { output_byte oc 3;
   output_reg oc reg1; output_reg oc reg2;
+  add_size 3;
   asm oc lexbuf}
 
 | start_line
     "djmp" spaces (int32_str as i) endline
 { output_byte oc 4;
   output_string_int32 oc i;
+  add_size 5;
   asm oc lexbuf}
 
 | start_line
@@ -71,25 +87,33 @@ rule asm oc = parse
 { output_byte oc 5;
   output_reg oc reg;
   output_string_int32 oc i;
+  add_size 6;
   asm oc lexbuf}
 
 | start_line
     "ijmp" spaces (register as reg) endline
 { output_byte oc 6;
   output_reg oc reg;
+  add_size 2;
   asm oc lexbuf}
 
 | start_line
     "oscall" endline
 { output_byte oc 7;
+  add_size 1;
   asm oc lexbuf}
 
 | newline
-    { asm oc lexbuf}
+{ asm oc lexbuf}
 | comment newline
-    { asm oc lexbuf}
+{ asm oc lexbuf}
 | eof
-    {()}
+{ (* aadd the padding at the end *)
+  let nbr_nop = 32 - (!size mod 32) in
+  for i = 1 to nbr_nop do
+    output_byte oc 0
+  done
+}
 
 
 {

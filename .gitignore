@@ -4,5 +4,4 @@
 _build
 validator
 *.native
-*.tst
 callgrind*
