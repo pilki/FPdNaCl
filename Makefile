@@ -49,11 +49,15 @@ test:
 
 # the validator built from the ml source on the git repo, not the extracted ones
 quick_validator: glue.ml
-	@echo "\nBuild the validator from the tracked sources, not the one extracted from the Coq files" \
-	&& echo "To build from those source, please do \"make all\"\n"
+	@echo
+	@echo "Build the validator from the tracked sources, not the one extracted from the Coq files" \
+	&& echo "To build from those source, please do \"make all\"" \
+	&& echo
 	$(OCAMLBUILD) $(OCB_OPTIONS) $(OCB_QUICK_INCLUDES) glue.native \
         && rm -f validator && $(SLN) _build/glue.native validator
-	@echo "\nTo run the tests: make test\n"
+	@echo
+	@echo "To run the tests: make test"
+	@echo
 
 
 all:
