@@ -95,6 +95,6 @@ validator: glue.ml
 .PHONY: proof extraction validator quick_validator all_quick asm test
 
 
-include .depend
+-include .depend
 
 FORCE:
