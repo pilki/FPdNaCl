@@ -1,5 +1,8 @@
 For a quick run, have a look at INSTALL
 
+For a softer introduction to the project, please have a look at
+http://groups.google.com/group/native-client-discuss/browse_thread/thread/bfb049f8a3390e9c
+
 This project provide a proof of an "inner sandbox" in the way of the
 Google Nativ eClient project. It is fully implemented in Coq (except
 some 50 lines of OCaml glue). It can then be extracted to OCaml code
