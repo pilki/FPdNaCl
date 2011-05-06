@@ -37,14 +37,37 @@ ASM=ASM.v
 
 FILES=$(NTCB) $(TCB) $(ASM)
 
+all_quick:
+	@$(MAKE) asm
+	@$(MAKE) quick_validator
+
+asm:
+	@$(MAKE) -C assembly
+
+test:
+	@$(MAKE) -C test
+
+# the validator built from the ml source on the git repo, not the extracted ones
+quick_validator: glue.ml
+	@echo "\nBuild the validator from the tracked sources, not the one extracted from the Coq files" \
+	&& echo "To build from those source, please do \"make all\"\n"
+	$(OCAMLBUILD) $(OCB_OPTIONS) $(OCB_QUICK_INCLUDES) glue.native \
+        && rm -f validator && $(SLN) _build/glue.native validator
+	@echo "\nTo run the tests: make test\n"
+
+
+all:
+	$(MAKE) proof
+	$(MAKE) extraction
+	$(MAKE) validator
+	$(MAKE) -C assembly
+
 proof: $(FILES:.v=.vo)
 
 
 extraction: extraction/extraction.v
 	rm -f extraction/*.ml extraction/*.mli extraction/*.vo
 	$(COQEXEC) extraction/extraction.v
-
-#.PHONY: extraction
 
 .SUFFIXES: .v .vo
 
@@ -62,24 +85,14 @@ clean:
 	rm -rf _build
 	rm -f doc/coq2html.ml doc/coq2html
 	rm -f extraction/*.ml extraction/*.mli
+	$(MAKE) -C assembly clean
 
 
 validator: glue.ml
 	$(OCAMLBUILD) $(OCB_OPTIONS) $(OCB_INCLUDES) glue.native \
         && rm -f validator && $(SLN) _build/glue.native validator
 
-quick_validator: glue.ml
-	$(OCAMLBUILD) $(OCB_OPTIONS) $(OCB_QUICK_INCLUDES) glue.native \
-        && rm -f validator && $(SLN) _build/glue.native validator
-
-all:
-	$(MAKE) proof
-	$(MAKE) extraction
-	$(MAKE) validator
-
-
-
-.PHONY: proof extraction validator quick_validator
+.PHONY: proof extraction validator quick_validator all_quick asm test
 
 
 include .depend

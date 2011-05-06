@@ -5,3 +5,7 @@ _build
 validator
 *.native
 callgrind*
+assembly/asm
+coq
+pcoq
+\#*\#

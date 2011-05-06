@@ -302,6 +302,6 @@ let rec lasy_list_of_ic ic =
 
 let _ =
   if ASM.validate_program (lasy_list_of_ic stdin) then
-    (print_string "ok!!\n"; exit 0)
+    (print_string "The code has been validated\n"; exit 0)
   else
-    (print_string "NOT ok!!\n"; exit 1)
+    (print_string "This code might be dangerous. REJECTED\n"; exit 1)

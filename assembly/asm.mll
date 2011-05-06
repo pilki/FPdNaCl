@@ -60,8 +60,8 @@ rule asm oc = parse
 }
 
 | start_line
-    "load" spaces (register as reg1) spaces "->" spaces
-    (register as reg2) endline
+    "read" spaces (register as reg2) spaces "<-" spaces
+    (register as reg1) endline
 { output_byte oc 2;
   output_reg oc reg1; output_reg oc reg2;
   add_size 3;

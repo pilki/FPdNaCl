@@ -1,11 +1,14 @@
-For quick installation, just run (needs ocaml, not coq)
-make quick_validator
+For quick instalation, just run (needs ocaml, not coq)
+> make all_quick
 
-To run the tests, first compile the assembly
-cd assembly; ocamlbuild asm.native
-the tests are in test/oktests and test/notoktests
+It builds a validator from ocaml sources that were obtained through
+extraction and then put on the git repository. To extract those source
+files yourself, please see below
 
-The validator expects the binary file to be sent on its stdin
+To run the tests, first run make all_quick and then
+> make test
+
+
 
 To check the proofs and compile this project, you will need:
 
@@ -18,6 +21,11 @@ To check the proofs and compile this project, you will need:
 Once the cases tactic is downloaded and compiled, modify Makefile.conf
 to indicate its path
 
-"make all" will then check the proofs, extract the OCaml code and
+>make all
+will then check the proofs, extract the OCaml code and
 compile it to build the simpl "validator" executable.
 
+The validator expects the binary file to be sent on its stdin
+
+then to run the test with this validator
+make test

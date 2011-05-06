@@ -6,35 +6,50 @@ in fact)
 
 No op:
 opcode: 0
+syntax1: nop
+syntax2: nop i (to insert i nops)
+
 
 logical and
 opcode: 1
 source register (one byte)
 mask (1 word, little endian)
 target register (one byte)
+syntax: %reg1 <- %reg2 and i
+        with reg1 and reg2 between 1 and 8
 
 memory read
 opcode: 2
-register with the source address (one byte)
-register where to store the result of the read (one byte)
+reg1: register with the source address (one byte)
+reg2: register where to store the result of the read (one byte)
+syntax: read %reg2 <- %reg1
+
 
 memory write
 opcode 3
-register with the content (one byte)
-register with the destination address (one byte)
+reg1: register with the content (one byte)
+reg2: register with the destination address (one byte)
+syntax: write reg1 -> reg2
+
 
 direct jump
 opcode 4
 address (one word)
+syntax: djmp i
+
 
 direct conditional jump
 opcode 5
 register to test (one byte)
 address (one word)
+syntax: djmp %reg i
 
 indirect jump
 opcode 6
 register containing the destination address (one byte)
+syntax: ijmp %reg
 
 a bad instruction (OS call)
 opcode 7
+syntax: oscall
+
