@@ -5,7 +5,7 @@ do
   if !(../../assembly/asm < $file | ../../validator)
   then
       echo "#############################################"
-      echo "ECHEC"
+      echo "FAILURE"
       echo "#############################################"
       exit 1
   fi
