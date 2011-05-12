@@ -117,25 +117,24 @@ Proof.
   simpl in *. congruence.
 Qed.
 
-
 Fixpoint ll_safe_take {X} (n: nat) (ll: lazy_list X) :=
   match n with
-    | O => Some 〈〉
+    | O => OK 〈〉
     | S n' =>
       match ll with
-        | 〈〉 => None
+        | 〈〉 => Err "List too short"
         | x ::: ll' =>
           do ll'' <- ll_safe_take n' ll';
-          Some (x ::: ll'')
+          OK (x ::: ll'')
       end
   end.
 
 Lemma ll_safe_take_size {X} n: forall  (ll ll': lazy_list X),
-  ll_safe_take n ll = Some ll' ->
+  ll_safe_take n ll = OK ll' ->
   ll_length ll' = n.
 Proof.
   induction n; simpl;intros; clean; eauto.
-  destruct ll as [|x []]; clean. inv_opt.
+  destruct ll as [|x []]; clean. inv_res.
   simpl. f_equal. eauto.
 Qed.
 

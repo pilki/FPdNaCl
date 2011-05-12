@@ -76,7 +76,7 @@ Module Prog_Semantics (Import I: INSTRUCTION).
     (* if we are in the code *)
     in_code code_size st1 ->
     (* we read the instruction *)
-    read_instr_from_memory st1.(state_mem) st1.(state_pc) = Some (instr, n) ->
+    read_instr_from_memory st1.(state_mem) st1.(state_pc) = OK (instr, n) ->
     (* and execute it *)
     instruction_semantics (header_size + code_size) instr st1 (Good_state st2) ->
     (* we allow any modification of the memory outside of the code
@@ -88,15 +88,16 @@ Module Prog_Semantics (Import I: INSTRUCTION).
                        state_regs :=st2.(state_regs) |})
 
   | Step_cannot_read_instr:
+    forall err,
     in_code code_size st1 ->
     (* if no instruction can be read, something wrong is hapening *)
-    read_instr_from_memory st1.(state_mem) st1.(state_pc) = None ->
+    read_instr_from_memory st1.(state_mem) st1.(state_pc) = Err err ->
     step code_size st1 DANGER_STATE
 
   | Step_bad: forall instr n,
     in_code code_size st1 ->
     (* if we can read an instruction *)
-    read_instr_from_memory st1.(state_mem) st1.(state_pc) = Some (instr, n) ->
+    read_instr_from_memory st1.(state_mem) st1.(state_pc) = OK (instr, n) ->
     (* but its execution goes wrong, it is wrong *)
     instruction_semantics code_size instr st1 Bad_state ->
     step code_size st1 DANGER_STATE

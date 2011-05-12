@@ -58,60 +58,60 @@ Module Instruction : INSTRUCTION.
 
   Open Scope nat_scope.
 
-  Definition reg_from_byte (b:byte) : option register :=
+  Definition reg_from_byte (b:byte) : res register :=
     match b with
-      | B01 => Some (REG1)
-      | B02 => Some (REG2)
-      | B03 => Some (REG3)
-      | B04 => Some (REG4)
-      | B05 => Some (REG5)
-      | B06 => Some (REG6)
-      | B07 => Some (REG7)
-      | B08 => Some (REG8)
-      | _ => None
+      | B01 => OK (REG1)
+      | B02 => OK (REG2)
+      | B03 => OK (REG3)
+      | B04 => OK (REG4)
+      | B05 => OK (REG5)
+      | B06 => OK (REG6)
+      | B07 => OK (REG7)
+      | B08 => OK (REG8)
+      | _ => Err "Register number must be between 1 and 8"
     end.
 
 
   Open Scope N_scope.
-  Function parse_instruction (addr: N) (ll: lazy_list byte) : option (instruction * N * lazy_list byte):=
+  Function parse_instruction (addr: N) (ll: lazy_list byte) : res (instruction * N * lazy_list byte):=
     match ll with
-      | 〈〉 => None
+      | 〈〉 => Err "Unknown instruction"
         (* No op *)
-      | B00 ::: rst_ll=> Some (Instr_noop, 1, rst_ll)
+      | B00 ::: rst_ll=> OK (Instr_noop, 1, rst_ll)
 
       | B01 ::: reg_code1 ::: b1 ::: b2 ::: b3 ::: b4 ::: reg_code2 ::: rst_ll=>
         do reg1 <- reg_from_byte reg_code1;
         do reg2 <- reg_from_byte reg_code2;
           (* we assume a little endian processor *)
-        Some (Instr_and reg1 (W b4 b3 b2 b1) reg2, 7, rst_ll)
+        OK (Instr_and reg1 (W b4 b3 b2 b1) reg2, 7, rst_ll)
 
       | B02 ::: reg_code1 ::: reg_code2 ::: rst_ll=>
         do reg1 <- reg_from_byte reg_code1;
         do reg2 <- reg_from_byte reg_code2;
-        Some (Instr_read reg1 reg2, 3, rst_ll)
+        OK (Instr_read reg1 reg2, 3, rst_ll)
 
       | B03 ::: reg_code1 ::: reg_code2 ::: rst_ll=>
         do reg1 <- reg_from_byte reg_code1;
         do reg2 <- reg_from_byte reg_code2;
-        Some (Instr_write reg1 reg2, 3, rst_ll)
+        OK (Instr_write reg1 reg2, 3, rst_ll)
 
       | B04 ::: b1 ::: b2 ::: b3 ::: b4 ::: rst_ll=>
-        Some (Instr_direct_jump (W b4 b3 b2 b1), 5, rst_ll)
+        OK (Instr_direct_jump (W b4 b3 b2 b1), 5, rst_ll)
 
       | B05 ::: reg_code1 ::: b1 ::: b2 ::: b3 ::: b4 ::: rst_ll=>
         do reg1 <- reg_from_byte reg_code1;
           (* we assume a little endian processor *)
-        Some (Instr_direct_cond_jump reg1 (W b4 b3 b2 b1), 6, rst_ll)
+        OK (Instr_direct_cond_jump reg1 (W b4 b3 b2 b1), 6, rst_ll)
 
       | B06 ::: reg_code1 :::  rst_ll=>
         do reg1 <- reg_from_byte reg_code1;
           (* we assume a little endian processor *)
-        Some (Instr_indirect_jump reg1, 2, rst_ll)
+        OK (Instr_indirect_jump reg1, 2, rst_ll)
 
       | B07 ::: rst_ll=>
-        Some (Instr_os_call (W byte0 byte0 byte0 byte0), 1, rst_ll)
+        OK (Instr_os_call (W byte0 byte0 byte0 byte0), 1, rst_ll)
 
-      | _ => None
+      | _ => Err "Unknown instruction"
     end.
 
   Definition instr_max_size: N := 7.
@@ -147,7 +147,7 @@ Module Instruction : INSTRUCTION.
     end.
 
   Lemma parse_instruction_drops:
-    forall pc ll instr n rst_ll, parse_instruction pc ll = Some (instr, n, rst_ll) ->
+    forall pc ll instr n rst_ll, parse_instruction pc ll = OK (instr, n, rst_ll) ->
     Some rst_ll = ll_safe_drop (nat_of_N n) ll.
   Proof.
     intros.
@@ -156,7 +156,7 @@ Module Instruction : INSTRUCTION.
 
 
   Lemma parse_instruction_do_read:
-    forall pc ll instr n rst_ll, parse_instruction pc ll = Some (instr, n, rst_ll) ->
+    forall pc ll instr n rst_ll, parse_instruction pc ll = OK (instr, n, rst_ll) ->
     N_of_nat (ll_length ll) >= n.
   Proof.
     intros.
@@ -170,10 +170,10 @@ Module Instruction : INSTRUCTION.
 
 
   Lemma parse_instruction_only_read:
-    forall pc ll instr n rst_ll, parse_instruction pc ll = Some (instr, n, rst_ll) ->
+    forall pc ll instr n rst_ll, parse_instruction pc ll = OK (instr, n, rst_ll) ->
     forall ll',
       ll_safe_take (nat_of_N n) ll' = ll_safe_take (nat_of_N n) ll ->
-      exists rst_ll', parse_instruction pc ll' = Some (instr, n, rst_ll').
+      exists rst_ll', parse_instruction pc ll' = OK (instr, n, rst_ll').
   Proof.
     intros.
     fun_ind_parse_instr; clean; simpl in *;
@@ -188,7 +188,7 @@ Module Instruction : INSTRUCTION.
 
 
   Lemma size_instr_not_0: forall pc ll instr n rst_ll,
-    parse_instruction pc ll = Some (instr, n, rst_ll) -> n <> 0.
+    parse_instruction pc ll = OK (instr, n, rst_ll) -> n <> 0.
   Proof.
     intros.
     fun_ind_parse_instr; clean; simpl in *; omega'.
@@ -196,7 +196,7 @@ Module Instruction : INSTRUCTION.
 
 
   Lemma size_instr_inf_max_size: forall pc ll instr n rst_ll,
-    parse_instruction pc ll = Some (instr, n, rst_ll) -> n <= instr_max_size.
+    parse_instruction pc ll = OK (instr, n, rst_ll) -> n <= instr_max_size.
   Proof.
     intros. unfold instr_max_size.
     fun_ind_parse_instr; clean; simpl in *; omega'.
@@ -217,13 +217,29 @@ Module Instruction : INSTRUCTION.
       | Instr_indirect_jump reg => Indirect_jump reg
       | Instr_os_call w => Invalid_instruction
     end.
+  Notation "'option_bind' f oa" :=
+    (match oa with
+       | Some a => f a
+       | None => None
+     end) (at level 10, f at next level, oa at next level, only parsing).
+
+
+  Notation "'doo' '_' '<-' A ; B" :=
+    (option_bind (fun _ => B) (A))
+    (at level 200, A at level 100, B at level 200, format
+  "'[v' 'doo'  '_'  <-  A ;  '/' B ']'").
+
+  Notation "'doo' X '<-' A ; B" :=
+    (option_bind (fun X => B) A)
+    (at level 200, X ident, A at level 100, B at level 200, format
+  "'[v' 'doo'  X  '<-'  A ;  '/' B ']'").
 
 
   Definition read_word (mem:memory) addr : option word :=
-    do b1 <- mem addr;
-    do b2 <- mem (addr + 1)%N;
-    do b3 <- mem (addr + 2)%N;
-    do b4 <- mem (addr + 3)%N;
+    doo b1 <- mem addr;
+    doo b2 <- mem (addr + 1)%N;
+    doo b3 <- mem (addr + 2)%N;
+    doo b4 <- mem (addr + 3)%N;
     Some (W b4 b3 b2 b1).
 
   Definition write_byte (mem:memory) addr byte : memory:=
@@ -355,7 +371,7 @@ Open Scope N_scope.
   Qed.
 
   Lemma sem_OK_instr_pc: forall st1 ll instr size rst_ll,
-    parse_instruction st1.(state_pc) ll = Some (instr, size, rst_ll) ->
+    parse_instruction st1.(state_pc) ll = OK (instr, size, rst_ll) ->
     classify_instruction instr = OK_instr ->
     forall code_size st2,
     instruction_semantics code_size instr st1 (Good_state st2) ->
@@ -366,7 +382,7 @@ Open Scope N_scope.
   Qed.
 
   Lemma sem_Mask_instr_pc: forall st1 ll instr size rst_ll,
-    parse_instruction st1.(state_pc) ll = Some (instr, size, rst_ll) ->
+    parse_instruction st1.(state_pc) ll = OK (instr, size, rst_ll) ->
     forall reg w,
     classify_instruction instr = Mask_instr reg w->
     forall code_size st2,
@@ -381,7 +397,7 @@ Open Scope N_scope.
 
 
   Lemma sem_Mask_instr_reg: forall st1 ll instr size rst_ll,
-    parse_instruction st1.(state_pc) ll = Some (instr, size, rst_ll) ->
+    parse_instruction st1.(state_pc) ll = OK (instr, size, rst_ll) ->
     forall reg w,
     classify_instruction instr = Mask_instr reg w->
     forall code_size st2,
@@ -399,7 +415,7 @@ Open Scope N_scope.
   Qed.
 
   Lemma sem_Direct_jump_pc: forall st1 ll instr size rst_ll,
-    parse_instruction st1.(state_pc) ll = Some (instr, size, rst_ll) ->
+    parse_instruction st1.(state_pc) ll = OK (instr, size, rst_ll) ->
     forall w,
     classify_instruction instr = Direct_jump w ->
     forall code_size st2,
@@ -419,7 +435,7 @@ Open Scope N_scope.
     
 
   Lemma sem_Indirect_jump_pc: forall st1 ll instr size rst_ll,
-    parse_instruction st1.(state_pc) ll = Some (instr, size, rst_ll) ->
+    parse_instruction st1.(state_pc) ll = OK (instr, size, rst_ll) ->
     forall reg,
     classify_instruction instr = Indirect_jump reg ->
     forall code_size st2,

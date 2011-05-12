@@ -29,67 +29,6 @@ Module ValProof (Import I : INSTRUCTION).
   Module ProgSem := Prog_Semantics(I).
   Export ProgSem.
   Export Val.
-  Ltac fun_ind_validate_n_byte :=
-    match goal with
-      | |- context[ validate_n_byte ?n ?a ?va ?tbca ?ll] =>
-        fun_ind_validate_n_byte_with
-          (validate_n_byte n a va tbca ll)
-      | H : context[ validate_n_byte ?n ?a ?va ?tbca ?ll] |- _ =>
-        fun_ind_validate_n_byte_with
-          (validate_n_byte n a va tbca ll)
-    end.
-
-  Ltac fun_ind_validate_ll_with call :=
-    functional induction call;
-      [ fst_Case_tac "fun_ind_validate_ll 1"
-      | fst_Case_tac "fun_ind_validate_ll 2"
-      | fst_Case_tac "fun_ind_validate_ll 3"].
-
-  Ltac fun_ind_validate_ll :=
-    match goal with
-      | |- context[ validate_ll_list ?a ?va ?tbca ?ll] =>
-        fun_ind_validate_ll_with
-          (validate_ll_list a va tbca ll)
-      | H: context[ validate_ll_list ?a ?va ?tbca ?ll] |- _  =>
-        fun_ind_validate_ll_with
-          (validate_ll_list a va tbca ll)
-    end.
-
-  (* to lib *)
-  Inductive _MARK_:Prop := MARK.
-
-  Ltac pose_mark :=
-    generalize MARK.
-
-  Ltac intros_until_mark :=
-    repeat
-      (match goal with
-         | H : _MARK_ |- _ => fail 1
-         | _ => idtac
-       end; intro);
-      (match goal with
-         | H : _MARK_ |- _ => clear H
-         | _ => idtac
-       end).
-
-  Ltac clean_post_fun_ind_validate :=
-    clean;
-    pose_mark;
-    repeat
-    match goal with
-      | H: parse_instruction _ _ = Some _ |- _ =>
-        let H' := fresh H "'" in
-        pose proof H as H'; revert H';
-        apply parse_instruction_drops in H; symmetry in H; apply ll_safe_drop_size in H
-    end;
-    repeat
-    match goal with
-      | H: safe_minus _ _ = Some _ |- _ =>
-        let H' := fresh H "'" in
-        pose proof H as H'; revert H';
-          apply safe_minus_correct in H
-    end; intros_until_mark; subst
-    .
 
 
   Lemma validate_n_byte_increase_valid_addresses:
@@ -97,7 +36,7 @@ Module ValProof (Import I : INSTRUCTION).
     (valid_addresses to_be_checked_addresses: NSet) (ll: lazy_list byte)
     valid_addresses' to_be_checked_addresses' ll',
     validate_n_byte n addr valid_addresses to_be_checked_addresses ll =
-    Some (valid_addresses', to_be_checked_addresses', ll') ->
+    OK (valid_addresses', to_be_checked_addresses', ll') ->
     forall addr', In_NSet addr' valid_addresses ->
       In_NSet addr' valid_addresses'.
   Proof.
@@ -110,7 +49,7 @@ Module ValProof (Import I : INSTRUCTION).
     (valid_addresses to_be_checked_addresses: NSet) (ll: lazy_list byte)
     valid_addresses' to_be_checked_addresses' ll',
     validate_n_byte n addr valid_addresses to_be_checked_addresses ll =
-    Some (valid_addresses', to_be_checked_addresses', ll') ->
+    OK (valid_addresses', to_be_checked_addresses', ll') ->
     forall addr', In_NSet addr' to_be_checked_addresses ->
       In_NSet addr' to_be_checked_addresses'.
   Proof.
@@ -120,8 +59,10 @@ Module ValProof (Import I : INSTRUCTION).
 
   Lemma ll_safe_drop_plus: forall X n1 n2 (ll: lazy_list X),
     ll_safe_drop (n1 + n2) ll =
-    do ll' <- ll_safe_drop n1 ll;
-    ll_safe_drop n2 ll'.
+    match ll_safe_drop n1 ll with
+      | None => None
+      | Some ll' => ll_safe_drop n2 ll'
+    end.
   Proof.
     induction' n1 as [|n1]; intros; simpl in *; auto.
     Case "S n1".
@@ -134,7 +75,7 @@ Module ValProof (Import I : INSTRUCTION).
     (valid_addresses to_be_checked_addresses: NSet) (ll: lazy_list byte)
     valid_addresses' to_be_checked_addresses' ll',
     validate_n_byte n addr valid_addresses to_be_checked_addresses ll =
-    Some (valid_addresses', to_be_checked_addresses', ll') ->
+    OK (valid_addresses', to_be_checked_addresses', ll') ->
     ll_safe_drop (nat_of_N n) ll = Some ll'.
   Proof.
     intros * VALIDATE.
@@ -142,10 +83,10 @@ Module ValProof (Import I : INSTRUCTION).
     fun_ind_validate_n_byte; clean_post_fun_ind_validate; subst;
     rewrite nat_of_Nplus; rewrite ll_safe_drop_plus;
     erewrite <- parse_instruction_drops; eauto.
-    Case "fun_ind_validate_n_byte 3".
+    Case "fun_ind_validate_n_byte 4".
       simpl. auto.
 
-    Case "fun_ind_validate_n_byte 4".
+    Case "fun_ind_validate_n_byte 6".
       rewrite nat_of_Nplus; rewrite ll_safe_drop_plus;
       erewrite <- parse_instruction_drops; eauto.
   Qed.
@@ -157,7 +98,7 @@ Module ValProof (Import I : INSTRUCTION).
     (valid_addresses to_be_checked_addresses: NSet) (ll: lazy_list byte)
     valid_addresses' to_be_checked_addresses' ll',
     validate_n_byte 32 addr valid_addresses to_be_checked_addresses ll =
-    Some (valid_addresses', to_be_checked_addresses', ll') ->
+    OK (valid_addresses', to_be_checked_addresses', ll') ->
     ll_safe_drop 32 ll = Some ll'.
   Proof.
     change 32%nat with (nat_of_N 32).
@@ -172,7 +113,7 @@ Module ValProof (Import I : INSTRUCTION).
     (valid_addresses to_be_checked_addresses: NSet) (ll: lazy_list byte)
     valid_addresses' to_be_checked_addresses',
     validate_ll_list addr valid_addresses to_be_checked_addresses ll =
-    Some (valid_addresses', to_be_checked_addresses') ->
+    OK (valid_addresses', to_be_checked_addresses') ->
     forall addr', In_NSet addr' valid_addresses ->
       In_NSet addr' valid_addresses'.
   Proof.
@@ -185,7 +126,7 @@ Module ValProof (Import I : INSTRUCTION).
     (valid_addresses to_be_checked_addresses: NSet) (ll: lazy_list byte)
     valid_addresses' to_be_checked_addresses',
     validate_ll_list addr valid_addresses to_be_checked_addresses ll =
-    Some (valid_addresses', to_be_checked_addresses') ->
+    OK (valid_addresses', to_be_checked_addresses') ->
     forall addr', In_NSet addr' to_be_checked_addresses ->
       In_NSet addr' to_be_checked_addresses'.
   Proof.
@@ -202,7 +143,7 @@ Module ValProof (Import I : INSTRUCTION).
     (valid_addresses to_be_checked_addresses: NSet) (ll: lazy_list byte)
     valid_addresses' to_be_checked_addresses' ll',
     validate_n_byte (Npos p) addr valid_addresses to_be_checked_addresses ll =
-    Some (valid_addresses', to_be_checked_addresses', ll') ->
+    OK (valid_addresses', to_be_checked_addresses', ll') ->
     In_NSet addr valid_addresses'.
   Proof.
     intros * VALIDATE.
@@ -223,15 +164,15 @@ Module ValProof (Import I : INSTRUCTION).
     (valid_addresses to_be_checked_addresses: NSet) (ll: lazy_list byte)
     valid_addresses' to_be_checked_addresses',
     validate_n_byte n addr valid_addresses to_be_checked_addresses ll =
-    Some (valid_addresses', to_be_checked_addresses', 〈〉) ->
+    OK (valid_addresses', to_be_checked_addresses', 〈〉) ->
     ll_length ll = nat_of_N n.
   Proof.
     intros * VALIDATE.
 
     fun_ind_validate_n_byte; clean_post_fun_ind_validate; rewrite nat_of_Nplus;
-      try (specialize (IHo VALIDATE); omega').
+      try (specialize (IHr VALIDATE); omega').
 
-    Case "fun_ind_validate_n_byte 3".
+    Case "fun_ind_validate_n_byte 4".
     simpl in *. omega'.
   Qed.
 
@@ -240,7 +181,7 @@ Module ValProof (Import I : INSTRUCTION).
       valid_addresses' to_be_checked_addresses',
       dividable_by_32 addr ->
       validate_ll_list addr valid_addresses to_be_checked_addresses ll =
-        Some (valid_addresses', to_be_checked_addresses') ->
+        OK (valid_addresses', to_be_checked_addresses') ->
       forall addr', addr <= addr' -> addr' < addr + (N_of_nat (ll_length ll)) ->
         dividable_by_32 addr' -> In_NSet addr' valid_addresses'.
   Proof.
@@ -256,7 +197,7 @@ Module ValProof (Import I : INSTRUCTION).
     Case "fun_ind_validate_ll 2".
       assert (dividable_by_32 (addr + 32)) by
         (destruct H; exists (x + 1);omega').
-      specialize (IHo H4 H0).
+      specialize (IHr H4 H0).
       destruct (N_eq_dec addr addr').
       SCase "addr = addr'".
         subst.
@@ -264,7 +205,7 @@ Module ValProof (Import I : INSTRUCTION).
       SCase "addr <> addr'".
         destruct H as [xaddr H].
         destruct H3 as [xaddr' H3]. subst.
-        apply IHo. omega'.
+        apply IHr. omega'.
         replace 32 with (N_of_nat 32) by reflexivity.
         rewrite <- Nplus_assoc. rewrite <- N_of_plus.
         erewrite <- ll_safe_drop_size; eauto.
@@ -293,7 +234,7 @@ Module ValProof (Import I : INSTRUCTION).
   | CA_intro:
     forall instr size_instr
     (SMALLER: addr + size_instr <= next_addr)
-    (READ_FROM_MEM: read_instr_from_memory mem addr = Some (instr, size_instr))
+    (READ_FROM_MEM: read_instr_from_memory mem addr = OK (instr, size_instr))
     (NOT_INV: classify_instruction instr <> Invalid_instruction)
     (NOT_IND: forall reg, classify_instruction instr <> Indirect_jump reg)
     (CLASSIFY_OK: classify_instruction instr = OK_instr ->
@@ -312,7 +253,7 @@ Module ValProof (Import I : INSTRUCTION).
       (exists instr', exists size_instr',
         w = proper_mask /\
         read_instr_from_memory mem (addr + size_instr) =
-          Some (instr', size_instr') /\
+          OK (instr', size_instr') /\
         addr + size_instr + size_instr' <= next_addr/\
         ok_addr next_addr valid_addresses to_be_checked_addresses
           (addr + size_instr + size_instr') /\
@@ -444,7 +385,7 @@ Module ValProof (Import I : INSTRUCTION).
 
 (*
   Lemma size_instr_not_0_N: forall bm instr n,
-    parse_instruction bm = Some (instr, n) -> N_of_nat n <> 0.
+    parse_instruction bm = OK (instr, n) -> N_of_nat n <> 0.
   Proof.
     intros.
     pose proof (size_instr_not_0 H). zify. auto.
@@ -464,7 +405,7 @@ Module ValProof (Import I : INSTRUCTION).
   Lemma validate_n_byte_add_valid_addresses_after n init_addr valid_addresses
     to_be_checked_addresses ll valid_addresses' to_be_checked_addresses' ll':
     validate_n_byte n init_addr valid_addresses to_be_checked_addresses ll
-      = Some (valid_addresses', to_be_checked_addresses', ll') ->
+      = OK (valid_addresses', to_be_checked_addresses', ll') ->
     NSet_smaller valid_addresses init_addr ->
     forall addr,
       In_NSet addr valid_addresses' ->
@@ -473,22 +414,22 @@ Module ValProof (Import I : INSTRUCTION).
   Proof.
 
     fun_ind_validate_n_byte; intros; clean_post_fun_ind_validate; eauto;
-    try match type of IHo with
+    try match type of IHr with
           | ?X -> ?Y -> _ =>
             assert X as HX; auto;
             assert Y as HY; eauto;
-            specialize (IHo HX HY _ H1);
+            specialize (IHr HX HY _ H1);
             clear HX HY
           end;
 
 (*    assert (a0<>0) by (destruct a0; clean).*)
     try solve [destruct (N_eq_dec addr0 addr);
       [subst; right; split; omega'|];
-    destruct IHo as [[INF IN]| [SUP INF]];
+    destruct IHr as [[INF IN]| [SUP INF]];
       [destruct (Nadd_In_or _ _ _ IN); [contradiction| eauto]|
         right; split; omega']].
 
-    Case "fun_ind_validate_n_byte 3".
+    Case "fun_ind_validate_n_byte 4".
       unfold NSet_smaller in *.
       assert (size_instr<>0) by eauto.
       destruct (Nadd_In_or _ _ _ H1); subst; eauto;
@@ -500,7 +441,7 @@ Module ValProof (Import I : INSTRUCTION).
   Lemma HELPER1 n size init_addr valid_addresses
     to_be_checked_addresses ll valid_addresses' to_be_checked_addresses' ll':
     validate_n_byte n (init_addr + size) (Nadd init_addr valid_addresses)
-      to_be_checked_addresses ll = Some (valid_addresses', to_be_checked_addresses', ll') ->
+      to_be_checked_addresses ll = OK (valid_addresses', to_be_checked_addresses', ll') ->
     size <> 0 ->
     NSet_smaller valid_addresses init_addr ->
     forall addr, addr >= init_addr -> init_addr <> addr ->
@@ -520,7 +461,7 @@ Module ValProof (Import I : INSTRUCTION).
   Lemma HELPER2 n size1 size2 init_addr valid_addresses
     to_be_checked_addresses ll valid_addresses' to_be_checked_addresses' ll':
     validate_n_byte n (init_addr + size1 + size2) (Nadd init_addr valid_addresses)
-      to_be_checked_addresses ll = Some (valid_addresses', to_be_checked_addresses', ll') ->
+      to_be_checked_addresses ll = OK (valid_addresses', to_be_checked_addresses', ll') ->
     size1 <> 0 -> size2 <> 0 ->
     NSet_smaller valid_addresses init_addr ->
     forall addr, addr >= init_addr -> init_addr <> addr ->
@@ -535,14 +476,14 @@ Module ValProof (Import I : INSTRUCTION).
   Lemma validate_n_byte_ok_addr n init_addr valid_addresses to_be_checked_addresses ll
     valid_addresses' to_be_checked_addresses' ll':
     validate_n_byte n init_addr valid_addresses to_be_checked_addresses ll
-      = Some (valid_addresses', to_be_checked_addresses', ll') ->
+      = OK (valid_addresses', to_be_checked_addresses', ll') ->
     ok_addr (init_addr + n) valid_addresses'
       to_be_checked_addresses' init_addr.
   Proof.
     fun_ind_validate_n_byte; intros; clean0; eauto;
       try solve [apply OA_Valid;
         eapply validate_n_byte_increase_valid_addresses; eauto with nset].
-    Case "fun_ind_validate_n_byte 3".
+    Case "fun_ind_validate_n_byte 4".
       apply OA_Valid. eauto with nset.
   Qed.
   Local Hint Resolve validate_n_byte_ok_addr.
@@ -552,7 +493,7 @@ Module ValProof (Import I : INSTRUCTION).
 
 
   Lemma memory_compat_parse_instruction: forall ll instr size_instr rst_ll addr,
-    parse_instruction addr ll = Some (instr, size_instr, rst_ll) ->
+    parse_instruction addr ll = OK (instr, size_instr, rst_ll) ->
     forall mem,
     memory_compat_addr_ll addr ll mem ->
     memory_compat_addr_ll (addr + size_instr) rst_ll mem.
@@ -568,7 +509,7 @@ Module ValProof (Import I : INSTRUCTION).
   Lemma validate_n_byte_correct_addr n init_addr valid_addresses to_be_checked_addresses ll
     valid_addresses' to_be_checked_addresses' ll':
     validate_n_byte n init_addr valid_addresses to_be_checked_addresses ll
-      = Some (valid_addresses', to_be_checked_addresses', ll') ->
+      = OK (valid_addresses', to_be_checked_addresses', ll') ->
     NSet_smaller valid_addresses init_addr ->
     forall mem, memory_compat_addr_ll init_addr ll mem ->
     forall addr, addr >= init_addr -> In_NSet addr valid_addresses' ->
@@ -591,7 +532,7 @@ Module ValProof (Import I : INSTRUCTION).
     try(rewrite Nplus_assoc in *;
         destruct (N_eq_dec addr addr0);
         [ SCase " = "; subst|
-          solve [eapply IHo; eauto]];
+          solve [eapply IHr; eauto]];
 
         eapply' CA_intro; eauto; instantiate; try(try red; intros; congruence);
           solve [try omega'; intros; clean_classify; eauto]).
@@ -599,7 +540,7 @@ Module ValProof (Import I : INSTRUCTION).
     Case "fun_ind_validate_n_byte 1".
       specialize (H0 _ H3). contradiction.
 
-    Case "fun_ind_validate_n_byte 3".
+    Case "fun_ind_validate_n_byte 4".
     clean0.
     destruct (Nadd_In_or _ _ _ H3).
       SCase "=". subst.
@@ -608,7 +549,7 @@ Module ValProof (Import I : INSTRUCTION).
           omega'.
       SCase "<>".
         specialize (H0 _ H). contradiction.
-    Case "fun_ind_validate_n_byte 4".
+    Case "fun_ind_validate_n_byte 6".
       repeat (rewrite Nplus_assoc in *).
       destruct (N_eq_dec addr addr0); [SCase "="|SCase "<>"].
       SCase "=".
@@ -622,9 +563,9 @@ Module ValProof (Import I : INSTRUCTION).
           repeat split; eauto; try omega'.
 
       SCase "<>".
-        apply IHo; eauto.
+        apply IHr; eauto.
 
-    Case "fun_ind_validate_n_byte 11".
+    Case "fun_ind_validate_n_byte 12".
       Focus 1.
       apply is_Nin_NIn in e5.
       destruct (N_eq_dec addr addr0).
@@ -635,9 +576,9 @@ Module ValProof (Import I : INSTRUCTION).
           intros; clean_classify; eauto. repeat rewrite Nplus_assoc in *.
           split; eauto with nset.
       repeat rewrite Nplus_assoc in *.
-      solve [eapply IHo; eauto].
+      solve [eapply IHr; eauto].
 
-    Case "fun_ind_validate_n_byte 12".
+    Case "fun_ind_validate_n_byte 13".
       repeat rewrite Nplus_assoc in *.
       destruct (N_eq_dec addr addr0).
       SCase "=".
@@ -649,7 +590,7 @@ Module ValProof (Import I : INSTRUCTION).
           repeat rewrite Nplus_assoc in *.
           split; eauto with nset.
        SCase "<>".
-       eapply IHo; eauto.
+       eapply IHr; eauto.
   Qed.
 
   Hint Resolve validate_n_byte_correct_addr.
@@ -657,7 +598,7 @@ Module ValProof (Import I : INSTRUCTION).
   Lemma validate_ll_list_add_valid_addresses_after init_addr valid_addresses
     to_be_checked_addresses ll valid_addresses' to_be_checked_addresses':
     validate_ll_list init_addr valid_addresses to_be_checked_addresses ll
-      = Some (valid_addresses', to_be_checked_addresses') ->
+      = OK (valid_addresses', to_be_checked_addresses') ->
     NSet_smaller valid_addresses init_addr ->
     forall addr,
       In_NSet addr valid_addresses' ->
@@ -670,7 +611,7 @@ Module ValProof (Import I : INSTRUCTION).
     rewrite H in *.
     edestruct validate_n_byte_add_valid_addresses_after as [[? ?]| [? ?]]; eauto.
     Case "fun_ind_validate_ll 2".
-    edestruct IHo as [[]|[]]; eauto.
+    edestruct IHr as [[]|[]]; eauto.
       SCase "premice".
         unfold NSet_smaller; intros.
         edestruct validate_n_byte_add_valid_addresses_after as [[]|[]]; eauto; omega'.
@@ -688,7 +629,7 @@ Module ValProof (Import I : INSTRUCTION).
     (valid_addresses to_be_checked_addresses: NSet) (ll: lazy_list byte)
     valid_addresses' to_be_checked_addresses',
     validate_ll_list addr valid_addresses to_be_checked_addresses ll =
-    Some (valid_addresses', to_be_checked_addresses') ->
+    OK (valid_addresses', to_be_checked_addresses') ->
     ll <> 〈〉 ->
     In_NSet addr valid_addresses'.
   Proof.
@@ -706,7 +647,7 @@ Module ValProof (Import I : INSTRUCTION).
   Lemma validate_ll_list_correct_addr init_addr valid_addresses to_be_checked_addresses ll
     valid_addresses' to_be_checked_addresses':
     validate_ll_list init_addr valid_addresses to_be_checked_addresses ll =
-      Some (valid_addresses', to_be_checked_addresses') ->
+      OK (valid_addresses', to_be_checked_addresses') ->
     NSet_smaller valid_addresses init_addr ->
     forall mem, memory_compat_addr_ll init_addr ll mem ->
     forall addr, addr >= init_addr -> In_NSet addr valid_addresses' ->
@@ -755,7 +696,7 @@ Module ValProof (Import I : INSTRUCTION).
           eauto.
 
       SCase "right".
-      eapply IHo; eauto.
+      eapply IHr; eauto.
         SSCase "NSet smaller".
           unfold NSet_smaller.
           intros.
@@ -927,7 +868,7 @@ Module ValProof (Import I : INSTRUCTION).
 
   Lemma almost_there: forall ll code_size valid_addresses to_be_checked_addresses,
     validate_ll_list header_size Nempty Nempty ll
-      = Some (valid_addresses, to_be_checked_addresses) ->
+      = OK (valid_addresses, to_be_checked_addresses) ->
     Nincluded to_be_checked_addresses valid_addresses ->
     code_size = N_of_nat (ll_length ll) ->
     forall mem, memory_compat_addr_ll header_size ll mem ->
@@ -1059,7 +1000,7 @@ Module ValProof (Import I : INSTRUCTION).
        S3Case "Indirect_jump".
          decompose [or and] H5. clear H5. subst.
          assert (read_instr_from_memory m2' (state_pc st +  n0) =
-           Some (instr', size_instr')) as READ_M2 by eauto.
+           OK (instr', size_instr')) as READ_M2 by eauto.
 (*         unfold read_instr_from_memory in *.
          eapply parse_instruction_only_read; eauto.
          intros. simpl.
@@ -1087,7 +1028,7 @@ Module ValProof (Import I : INSTRUCTION).
              end.
 
              edestruct sem_Indirect_jump_pc with (instr:=instr'); eauto; instantiate; clean_state.
-             eapply Heqo0.
+             eapply Heqr0.
              subst. eapply OK_DANGER with (n' := n) (m := m2'0); eauto.
              subst. clear H11.
              eapply OK_DANGER with (n' := n) (m := m2'0) (4 := H12); eauto.

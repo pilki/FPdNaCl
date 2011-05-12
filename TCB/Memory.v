@@ -117,20 +117,18 @@ Ltac destr_parse_instr_only_read :=
         end
     end.
 
-  Definition read_instr_from_memory (mem: memory) (pc: N): option (instruction * N) :=
+  Definition read_instr_from_memory (mem: memory) (pc: N): res (instruction * N) :=
     do (instr, size, _) <- parse_instruction pc (build_list_from_memory (nat_of_N instr_max_size) pc mem);
-    Some (instr, size).
+    OK (instr, size).
 
 
   (* reading from memory is the same as parsing instruction when the
   memory is compatible with the list *)
-
-
   Theorem memory_compat_read_instr addr ll mem:
     memory_compat_addr_ll addr ll mem ->
     forall instr size_instr rst_ll,
-      parse_instruction addr ll = Some (instr, size_instr, rst_ll) ->
-      read_instr_from_memory mem addr = Some (instr, size_instr).
+      parse_instruction addr ll = OK (instr, size_instr, rst_ll) ->
+      read_instr_from_memory mem addr = OK (instr, size_instr).
   Proof.
     intros COMPAT * PARSE.
     unfold read_instr_from_memory.
@@ -146,7 +144,7 @@ Ltac destr_parse_instr_only_read :=
     change_size_instr size_instr.
     change_size_instr ims.
 
-    assert (is_some (ll_safe_take size_instr ll)).
+    assert (is_ok (ll_safe_take size_instr ll)).
     clear - PARSE. revert size_instr PARSE.
     induction' ll as [| b ll']; simpl; intros.
     Case "@ll_nil".
@@ -171,7 +169,7 @@ Ltac destr_parse_instr_only_read :=
         destruct ims; [elimtype False; omega|].
         assert (size_instr <= ims)%nat by omega.
         assert (ll_length ll' >= size_instr)%nat by omega.
-        simpl in *. inv H0; clean. inv_opt.
+        simpl in *. inv H0; clean. inv_res.
         pose proof COMPAT.
         unfold memory_compat_addr_ll in H3.
         specialize (H3 O). replace (addr + N_of_nat 0) with addr in * by omega'.
@@ -214,16 +212,16 @@ Ltac destr_parse_instr_only_read :=
     (forall addr : N, addr < next_addr -> mem1 addr = mem2 addr) ->
     forall instr size_instr,
       addr + size_instr <= next_addr ->
-      read_instr_from_memory mem1 addr = Some (instr, size_instr) ->
-      read_instr_from_memory mem2 addr = Some (instr, size_instr).
+      read_instr_from_memory mem1 addr = OK (instr, size_instr) ->
+      read_instr_from_memory mem2 addr = OK (instr, size_instr).
   Proof.
     unfold read_instr_from_memory. intros SAME * INF READ.
 
     match goal with
       | H : match ?X with
-              | Some _ => _
-              | None => None
-            end = Some _ |- _ =>
+              | OK _ => _
+              | Err _ => Err _
+            end = OK _ |- _ =>
       destruct X as [[[]]|] _eqn; clean
     end.
     destr_parse_instr_only_read.
@@ -232,7 +230,7 @@ Ltac destr_parse_instr_only_read :=
 
 (*    pose proof READ.*)
 (*    apply parse_instruction_do_read in READ.*)
-    remember instr_max_size as ims. clear Heqims. clear Heqo.
+    remember instr_max_size as ims. clear Heqims. clear Heqr.
     change_size_instr size_instr. change_size_instr ims.
 
     revert dependent ims. revert dependent addr. clear instr.

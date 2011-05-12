@@ -18,6 +18,7 @@ Require Export NArith.
 Require Import RelationClasses.
 Require Import Program.
 Require Export List.
+Require Export DoOption.
 Open Scope bool_scope.
 
 
@@ -89,6 +90,44 @@ Ltac inv_opt :=
     end
   end).
 
+Ltac inv_res :=
+ repeat
+   (match goal with
+    | H : match ?X with
+            | OK _ => OK _
+            | Err _ => Err _
+          end = OK _ |- _ =>
+    case_eq X; intros;
+      match goal with
+        | HEQ : X = _ |- _ =>
+          rewrite HEQ in H; simpl in *; inv H; auto
+      end
+  end);
+ repeat
+   (match goal with
+    | H : match ?X with
+            | OK _ => OK _
+            | Err _ => Err _
+          end = Err _ |- _ =>
+    case_eq X; intros;
+      match goal with
+        | HEQ : X = _ |- _ =>
+          rewrite HEQ in H; simpl in *; inv H; auto
+      end
+  end);
+ repeat
+   (match goal with
+    | H : match ?X with
+            | OK _ => _
+            | Err _ => False
+          end |- _ =>
+    case_eq X; intros;
+    match goal with
+      | H' : X = _ |- _ =>
+        rewrite H' in H; auto
+    end
+  end).
+
 
 (* a type to do rewriting only in the environement *)
 
@@ -149,6 +188,38 @@ Ltac solve_is_some :=
       rewrite <- H; apply IsSome
   end; fail.
 
+
+Inductive is_ok {RES :Type}: res RES -> Prop :=
+  IsOK: forall r: RES, is_ok (OK r).
+Hint Constructors is_ok.
+
+Lemma is_ok_OK {RES:Type} (a:RES):
+  is_ok (@OK RES  a) -r> True.
+Proof. 
+  constructor. auto.
+Qed.
+
+Lemma is_ok_Err {RES :Type} s:
+  @is_ok RES (@Err RES s) -r> False.
+Proof.
+  constructor. intro H. inversion H.
+Qed.
+
+Hint Rewrite @is_ok_OK @is_ok_Err: clean.
+
+Ltac solve_is_ok :=
+  intros;
+  match goal with
+    | H : is_ok (Err _) |- _ => inv H
+    | |- is_ok (OK ?x) => apply IsOK
+    | H : ?X = OK ?Y |- is_ok ?X =>
+      rewrite H; apply IsOK
+    | H : OK ?Y = ?X |- is_ok ?X =>
+      rewrite <- H; apply IsSome
+  end; fail.
+
+
+
 Ltac solve_contradiction :=
   intros;
   match goal with
@@ -158,6 +229,8 @@ Ltac solve_contradiction :=
     | H : O = S ?X |- _ => inversion H
     | H : Some ?X = None |- _ => inversion H
     | H : None = Some ?X |- _ => inversion H
+    | H : OK _ = Err _ |- _ => inversion H
+    | H : Err _ = OK _ |- _ => inversion H
     | H : true = false |- _ => inversion H
     | H : false = true |- _ => inversion H
     | H : in_left = in_right |- _ => inversion H
@@ -171,6 +244,7 @@ Ltac solve_contradiction :=
 
 
 Hint Extern 5 => solve_is_some.
+Hint Extern 5 => solve_is_ok.
 Hint Extern 5 => solve_contradiction.
 
 
@@ -199,6 +273,18 @@ Ltac option_on_right :=
           | _ = Some _ => fail 1
           | Some _ = _ => symmetry in H
           | None = _ => symmetry in H
+        end
+    end.
+
+Ltac res_on_right :=
+  repeat
+    match goal with
+      | H : _ |- _ =>
+        match type of H with
+          | _ = Err _ => fail 1
+          | _ = OK _ => fail 1
+          | OK _ = _ => symmetry in H
+          | Err _ = _ => symmetry in H
         end
     end.
 
@@ -297,6 +383,7 @@ Tactic Notation "clean" :=
   clean in *;
   normalize_env_aux;
   option_on_right;
+  res_on_right;
   try solve_contradiction;
   subst; auto)).
 
@@ -305,6 +392,7 @@ Tactic Notation "clean" "no" "auto" :=
   clean in *;
   normalize_env_aux;
   option_on_right;
+  res_on_right;
   try solve_contradiction;
   subst)).
 
@@ -315,6 +403,14 @@ Ltac prog_match_option :=
       destruct X as [x|] _eqn
     | |- context[match ?X with |Some x => _ | None =>  _ end] =>
       destruct X as [x|] _eqn
+  end.
+
+Ltac prog_match_res :=
+  match goal with
+    | H : context[match ?X with |OK x => _ | Err y =>  _ end] |- _ =>
+      destruct X as [x|y] _eqn
+    | |- context[match ?X with |OK x => _ | Err y =>  _ end] =>
+      destruct X as [x|y] _eqn
   end.
 
 Tactic Notation "dest_if_aux" constr(TERM) "as" simple_intropattern(pat):=
@@ -356,7 +452,12 @@ Proof.
   split; congruence. 
 Qed.
 
-Hint Rewrite remove_some: clean.
+Lemma remove_ok: forall A (x y: A), OK x = OK y -r> x = y.
+Proof.
+  split; congruence. 
+Qed.
+
+Hint Rewrite remove_some remove_ok: clean.
 
 Local Open Scope N_scope.
 

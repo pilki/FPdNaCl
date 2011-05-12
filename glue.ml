@@ -279,7 +279,6 @@ let byte_of_int = function
   | 255 -> BFF
   | _ -> assert false
 
-
 (* build a byte (pair of two half byte) from a char *)
 
 let byte_of_char c : byte =
@@ -291,6 +290,31 @@ let _ = assert (byte_of_char (char_of_int 0xF0) = BF0)
 let _ = assert (byte_of_char (char_of_int 0x1F) = B1F)
 let _ = assert (byte_of_char (char_of_int 0x27) = B27)
 
+(* Strings (from CompCert) *)
+
+let char_of_ascii (Ascii.Ascii(a0, a1, a2, a3, a4, a5, a6, a7)) =
+  Char.chr(  (if a0 then 1 else 0)
+           + (if a1 then 2 else 0)
+           + (if a2 then 4 else 0)
+           + (if a3 then 8 else 0)
+           + (if a4 then 16 else 0)
+           + (if a5 then 32 else 0)
+           + (if a6 then 64 else 0)
+           + (if a7 then 128 else 0))
+
+let coqstring_length s =
+  let rec len accu = function
+  | String0.EmptyString -> accu
+  | String0.String(_, s) -> len (accu + 1) s
+  in len 0 s
+
+let camlstring_of_coqstring s =
+  let r = String.create (coqstring_length s) in
+  let rec fill pos = function
+  | String0.EmptyString -> r
+  | String0.String(c, s) -> r.[pos] <- char_of_ascii c; fill (pos + 1) s
+  in fill 0 s
+
 
 (* build the lazy list of bytes from an input channel *)
 let rec lasy_list_of_ic ic =
@@ -301,7 +325,9 @@ let rec lasy_list_of_ic ic =
   | End_of_file -> Coq_ll_nil
 
 let _ =
-  if ASM.validate_program (lasy_list_of_ic stdin) then
+  match ASM.validate_program (lasy_list_of_ic stdin) with
+  | DoOption.OK _ ->
     (print_string "The code has been validated\n"; exit 0)
-  else
-    (print_string "This code might be dangerous. REJECTED\n"; exit 1)
+  | DoOption.Err e ->
+    (Printf.printf "This code might be dangerous. REJECTED\nReason: %s\n"
+       (camlstring_of_coqstring e); exit 1)

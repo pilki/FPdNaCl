@@ -11,11 +11,19 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details. *)
+Set Implicit Arguments.
+Require String.
+Inductive res (RES: Type) : Type :=
+| OK : RES -> res RES
+| Err: String.string -> res RES.
 
-Notation "'option_bind' f oa" :=
+Implicit Arguments OK [[RES]].
+Implicit Arguments Err [[RES]].
+
+Notation "'error_bind' f oa" :=
   (match oa with
-    | Some a => f a
-    | None => None
+    | OK a => f a
+    | Err e => Err e
   end) (at level 10, f at next level, oa at next level, only parsing).
 
 
@@ -32,79 +40,79 @@ Notation "'option_bind' f oa" :=
 
 
 Notation "'do' '_' '<-' A ; B" :=
-  (option_bind (fun _ => B) (A))
+  (error_bind (fun _ => B) (A))
    (at level 200, A at level 100, B at level 200, format
    "'[v' 'do'  '_'  <-  A ;  '/' B ']'").
 
 Notation "'do' X '<-' A ; B" :=
-  (option_bind (fun X => B) A)
+  (error_bind (fun X => B) A)
    (at level 200, X ident, A at level 100, B at level 200, format
    "'[v' 'do'  X  '<-'  A ;  '/' B ']'").
 
 Notation "'do' ( X : T ) <- A ; B" :=
-  (option_bind (fun (X: T) => B) A)
+  (error_bind (fun (X: T) => B) A)
    (at level 200, X ident, A at level 100,
     T at level 100, B at level 200, only parsing).
 
 Notation "'do' ( '_' : T ) <- A ; B" :=
-  (option_bind (fun (_: T) => B) A)
+  (error_bind (fun (_: T) => B) A)
    (at level 200, A at level 100, T at level 100, B at level 200, only parsing).
 
 Notation "'do' ( X , Y ) <- A ; B" :=
-  (option_bind (fun _XY_ => let '(X, Y) := _XY_ in  B) A)
+  (error_bind (fun _XY_ => let '(X, Y) := _XY_ in  B) A)
    (at level 200, X ident, Y ident, A at level 100, B at level 200, format
    "'[v' 'do'  ( X ,  Y )  '<-'  A ;  '/' B ']'").
 
 Notation "'do' ( '_' , Y ) <- A ; B" :=
-  (option_bind (fun _XY_ => let '(_, Y) := _XY_ in  B) A)
+  (error_bind (fun _XY_ => let '(_, Y) := _XY_ in  B) A)
    (at level 200, Y ident, A at level 100, B at level 200, format
    "'[v' 'do'  ( '_' ,  Y )  '<-'  A ;  '/' B ']'").
 Notation "'do' ( X , '_' ) <- A ; B" :=
-  (option_bind (fun _XY_ => let '(X, _) := _XY_ in  B) A)
+  (error_bind (fun _XY_ => let '(X, _) := _XY_ in  B) A)
    (at level 200, X ident, A at level 100, B at level 200, format
    "'[v' 'do'  ( X ,  '_' )  '<-'  A ;  '/' B ']'").
 
 
 
 Notation "'do' ( X , Y , Z ) <- A ; B" :=
-  (option_bind (fun (_XYZ_: _ * _ *_) =>
+  (error_bind (fun (_XYZ_: _ * _ *_) =>
     let '(X, Y, Z) := _XYZ_ in B) A)
    (at level 200, X ident, Y ident, Z ident, A at level 100, B at level 200, format
    "'[v' 'do'  ( X ,  Y ,  Z )  '<-'  A ;  '/' B ']'").
 
 Notation "'do' ( '_' , Y , Z ) <- A ; B" :=
-  (option_bind (fun (_XYZ_: _ * _ *_) =>
+  (error_bind (fun (_XYZ_: _ * _ *_) =>
     let '(_, Y, Z) := _XYZ_ in B) A)
    (at level 200,  Y ident, Z ident, A at level 100, B at level 200, format
    "'[v' 'do'  ( '_' ,  Y ,  Z )  '<-'  A ;  '/' B ']'").
 
 Notation "'do' ( X , '_' , Z ) <- A ; B" :=
-  (option_bind (fun (_XYZ_: _ * _ *_) =>
+  (error_bind (fun (_XYZ_: _ * _ *_) =>
     let '(X, _, Z) := _XYZ_ in B) A)
    (at level 200, X ident, Z ident, A at level 100, B at level 200, format
    "'[v' 'do'  ( X ,  '_' ,  Z )  '<-'  A ;  '/' B ']'").
 
 
 Notation "'do' ( X , Y , '_' ) <- A ; B" :=
-  (option_bind (fun (_XYZ_: _ * _ *_) =>
+  (error_bind (fun (_XYZ_: _ * _ *_) =>
     let '(X, Y, _) := _XYZ_ in B) A)
    (at level 200, X ident, Y ident, A at level 100, B at level 200, format
    "'[v' 'do'  ( X ,  Y ,  '_' )  '<-'  A ;  '/' B ']'").
 
 Notation "'do' ( X , '_' , '_' ) <- A ; B" :=
-  (option_bind (fun (_XYZ_: _ * _ *_) =>
+  (error_bind (fun (_XYZ_: _ * _ *_) =>
     let '(X, _, _) := _XYZ_ in B) A)
    (at level 200, X ident, A at level 100, B at level 200, format
    "'[v' 'do'  ( X ,  '_' ,  '_' )  '<-'  A ;  '/' B ']'").
 
 Notation "'do' ( '_' , Y , '_' ) <- A ; B" :=
-  (option_bind (fun (_XYZ_: _ * _ *_) =>
+  (error_bind (fun (_XYZ_: _ * _ *_) =>
     let '(X, Y, Z) := _XYZ_ in B) A)
    (at level 200, Y ident, A at level 100, B at level 200, format
    "'[v' 'do'  ( '_' ,  Y ,  '_' )  '<-'  A ;  '/' B ']'").
 
 Notation "'do' ( '_' , '_' , Z ) <- A ; B" :=
-  (option_bind (fun (_XYZ_: _ * _ *_) =>
+  (error_bind (fun (_XYZ_: _ * _ *_) =>
     let '(_, _, Z) := _XYZ_ in B) A)
    (at level 200, Z ident, A at level 100, B at level 200, format
    "'[v' 'do'  ( '_' ,  '_' ,  Z )  '<-'  A ;  '/' B ']'").

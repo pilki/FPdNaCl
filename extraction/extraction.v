@@ -15,6 +15,9 @@
 Require Import ExtrOcamlBasic.
 Require ASM.
 
+(* Avoid name clashes *)
+Extraction Blacklist List String.
+
 (* Go! *)
 Cd "extraction".
 Recursive Extraction Library ASM.

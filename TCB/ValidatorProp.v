@@ -39,7 +39,7 @@ Module ValProp (Import I : INSTRUCTION).
   Hint Resolve same_code_refl.
   
   Theorem validator_dividable_no_danger:
-    forall ll, validate_program ll = true ->
+    forall ll, validate_program ll = OK tt ->
     forall st,
       memory_compat_addr_ll header_size ll st.(state_mem) ->
       dividable_by_32 st.(state_pc) ->
@@ -58,19 +58,20 @@ Module ValProp (Import I : INSTRUCTION).
     unfold validate_program in H.
     destruct (validate_ll_list header_size Nempty Nempty ll) as [] _eqn; eauto.
     destruct p as [valid_addresses to_be_checked_addresses].
-    apply is_Nincluded_included in H.
+    dest_if; clean.
+    apply is_Nincluded_included in Heqb.
     eapply almost_there; eauto. 
     tri_split.
     right. right. repeat split; auto.
     eapply validate_ll_list_correct_addr; eauto.
     unfold NSet_smaller. intros. edestruct Nempty_empty; eauto.
     omega'.
-    eapply addresses_multiple_of_32_in_valid_addresses with (2 := Heqo); eauto.
+    eapply addresses_multiple_of_32_in_valid_addresses with (2 := Heqr); eauto.
     apply dividable_by_32_header_size.
   Qed.
 
   Theorem validator_dividable_no_danger_header_size:
-    forall ll, validate_program ll = true ->
+    forall ll, validate_program ll = OK tt ->
     forall st,
       memory_compat_addr_ll header_size ll st.(state_mem) ->
       st.(state_pc) = header_size ->
