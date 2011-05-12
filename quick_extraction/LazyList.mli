@@ -1,4 +1,7 @@
+open Ascii
 open Datatypes
+open DoOption
+open String0
 
 type 'x coq_lazy = 'x __coq_lazy Lazy.t
 and 'x __coq_lazy =
@@ -19,5 +22,5 @@ val ll_nth : nat -> 'a1 lazy_list -> 'a1 option
 
 val ll_safe_drop : nat -> 'a1 lazy_list -> 'a1 lazy_list option
 
-val ll_safe_take : nat -> 'a1 lazy_list -> 'a1 lazy_list option
+val ll_safe_take : nat -> 'a1 lazy_list -> 'a1 lazy_list res
 

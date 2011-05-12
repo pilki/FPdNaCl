@@ -2,6 +2,7 @@ open BinNat
 open BinPos
 open BinaryDefs
 open Byte
+open DoOption
 open LazyList
 
 type memory = coq_N -> byte option
@@ -57,8 +58,7 @@ module type INSTRUCTION =
   type instruction 
   
   val parse_instruction :
-    coq_N -> byte lazy_list -> ((instruction * coq_N) * byte lazy_list)
-    option
+    coq_N -> byte lazy_list -> ((instruction * coq_N) * byte lazy_list) res
   
   val instr_max_size : coq_N
   

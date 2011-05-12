@@ -1,11 +1,14 @@
+open Ascii
 open BinNat
 open BinPos
 open BinaryDefs
 open Byte
 open Datatypes
+open DoOption
 open LazyList
 open NSet
 open Semantics
+open String0
 open Validator
 
 type __ = Obj.t
@@ -126,51 +129,305 @@ module Instruction =
   
   type instruction = instruction'
   
-  (** val reg_from_byte : byte -> register option **)
+  (** val reg_from_byte : byte -> register res **)
   
   let reg_from_byte = function
-    | B01 -> Some REG1
-    | B02 -> Some REG2
-    | B03 -> Some REG3
-    | B04 -> Some REG4
-    | B05 -> Some REG5
-    | B06 -> Some REG6
-    | B07 -> Some REG7
-    | B08 -> Some REG8
-    | _ -> None
+    | B01 -> OK REG1
+    | B02 -> OK REG2
+    | B03 -> OK REG3
+    | B04 -> OK REG4
+    | B05 -> OK REG5
+    | B06 -> OK REG6
+    | B07 -> OK REG7
+    | B08 -> OK REG8
+    | _ -> Err (String ((Ascii (false, true, false, false, true, false, true,
+        false)), (String ((Ascii (true, false, true, false, false, true,
+        true, false)), (String ((Ascii (true, true, true, false, false, true,
+        true, false)), (String ((Ascii (true, false, false, true, false,
+        true, true, false)), (String ((Ascii (true, true, false, false, true,
+        true, true, false)), (String ((Ascii (false, false, true, false,
+        true, true, true, false)), (String ((Ascii (true, false, true, false,
+        false, true, true, false)), (String ((Ascii (false, true, false,
+        false, true, true, true, false)), (String ((Ascii (false, false,
+        false, false, false, true, false, false)), (String ((Ascii (false,
+        true, true, true, false, true, true, false)), (String ((Ascii (true,
+        false, true, false, true, true, true, false)), (String ((Ascii (true,
+        false, true, true, false, true, true, false)), (String ((Ascii
+        (false, true, false, false, false, true, true, false)), (String
+        ((Ascii (true, false, true, false, false, true, true, false)),
+        (String ((Ascii (false, true, false, false, true, true, true,
+        false)), (String ((Ascii (false, false, false, false, false, true,
+        false, false)), (String ((Ascii (true, false, true, true, false,
+        true, true, false)), (String ((Ascii (true, false, true, false, true,
+        true, true, false)), (String ((Ascii (true, true, false, false, true,
+        true, true, false)), (String ((Ascii (false, false, true, false,
+        true, true, true, false)), (String ((Ascii (false, false, false,
+        false, false, true, false, false)), (String ((Ascii (false, true,
+        false, false, false, true, true, false)), (String ((Ascii (true,
+        false, true, false, false, true, true, false)), (String ((Ascii
+        (false, false, false, false, false, true, false, false)), (String
+        ((Ascii (false, true, false, false, false, true, true, false)),
+        (String ((Ascii (true, false, true, false, false, true, true,
+        false)), (String ((Ascii (false, false, true, false, true, true,
+        true, false)), (String ((Ascii (true, true, true, false, true, true,
+        true, false)), (String ((Ascii (true, false, true, false, false,
+        true, true, false)), (String ((Ascii (true, false, true, false,
+        false, true, true, false)), (String ((Ascii (false, true, true, true,
+        false, true, true, false)), (String ((Ascii (false, false, false,
+        false, false, true, false, false)), (String ((Ascii (true, false,
+        false, false, true, true, false, false)), (String ((Ascii (false,
+        false, false, false, false, true, false, false)), (String ((Ascii
+        (true, false, false, false, false, true, true, false)), (String
+        ((Ascii (false, true, true, true, false, true, true, false)), (String
+        ((Ascii (false, false, true, false, false, true, true, false)),
+        (String ((Ascii (false, false, false, false, false, true, false,
+        false)), (String ((Ascii (false, false, false, true, true, true,
+        false, false)),
+        EmptyString))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
   
   (** val parse_instruction :
-      coq_N -> byte lazy_list -> ((instruction * coq_N) * byte lazy_list)
-      option **)
+      coq_N -> byte lazy_list -> ((instruction * coq_N) * byte lazy_list) res **)
   
   let parse_instruction addr = function
-    | Coq_ll_nil -> None
+    | Coq_ll_nil -> Err (String ((Ascii (true, false, true, false, true,
+        false, true, false)), (String ((Ascii (false, true, true, true,
+        false, true, true, false)), (String ((Ascii (true, true, false, true,
+        false, true, true, false)), (String ((Ascii (false, true, true, true,
+        false, true, true, false)), (String ((Ascii (true, true, true, true,
+        false, true, true, false)), (String ((Ascii (true, true, true, false,
+        true, true, true, false)), (String ((Ascii (false, true, true, true,
+        false, true, true, false)), (String ((Ascii (false, false, false,
+        false, false, true, false, false)), (String ((Ascii (true, false,
+        false, true, false, true, true, false)), (String ((Ascii (false,
+        true, true, true, false, true, true, false)), (String ((Ascii (true,
+        true, false, false, true, true, true, false)), (String ((Ascii
+        (false, false, true, false, true, true, true, false)), (String
+        ((Ascii (false, true, false, false, true, true, true, false)),
+        (String ((Ascii (true, false, true, false, true, true, true, false)),
+        (String ((Ascii (true, true, false, false, false, true, true,
+        false)), (String ((Ascii (false, false, true, false, true, true,
+        true, false)), (String ((Ascii (true, false, false, true, false,
+        true, true, false)), (String ((Ascii (true, true, true, true, false,
+        true, true, false)), (String ((Ascii (false, true, true, true, false,
+        true, true, false)),
+        EmptyString))))))))))))))))))))))))))))))))))))))
     | Coq_ll_cons (x, l) ->
         (match x with
            | B00 ->
                let Lazy rst_ll = Lazy.force l in
-               Some ((Instr_noop, (Npos Coq_xH)), rst_ll)
+               OK ((Instr_noop, (Npos Coq_xH)), rst_ll)
            | B01 ->
                let Lazy l0 = Lazy.force l in
                (match l0 with
-                  | Coq_ll_nil -> None
+                  | Coq_ll_nil -> Err (String ((Ascii (true, false, true,
+                      false, true, false, true, false)), (String ((Ascii
+                      (false, true, true, true, false, true, true, false)),
+                      (String ((Ascii (true, true, false, true, false, true,
+                      true, false)), (String ((Ascii (false, true, true,
+                      true, false, true, true, false)), (String ((Ascii
+                      (true, true, true, true, false, true, true, false)),
+                      (String ((Ascii (true, true, true, false, true, true,
+                      true, false)), (String ((Ascii (false, true, true,
+                      true, false, true, true, false)), (String ((Ascii
+                      (false, false, false, false, false, true, false,
+                      false)), (String ((Ascii (true, false, false, true,
+                      false, true, true, false)), (String ((Ascii (false,
+                      true, true, true, false, true, true, false)), (String
+                      ((Ascii (true, true, false, false, true, true, true,
+                      false)), (String ((Ascii (false, false, true, false,
+                      true, true, true, false)), (String ((Ascii (false,
+                      true, false, false, true, true, true, false)), (String
+                      ((Ascii (true, false, true, false, true, true, true,
+                      false)), (String ((Ascii (true, true, false, false,
+                      false, true, true, false)), (String ((Ascii (false,
+                      false, true, false, true, true, true, false)), (String
+                      ((Ascii (true, false, false, true, false, true, true,
+                      false)), (String ((Ascii (true, true, true, true,
+                      false, true, true, false)), (String ((Ascii (false,
+                      true, true, true, false, true, true, false)),
+                      EmptyString))))))))))))))))))))))))))))))))))))))
                   | Coq_ll_cons (reg_code1, l1) ->
                       let Lazy l2 = Lazy.force l1 in
                       (match l2 with
-                         | Coq_ll_nil -> None
+                         | Coq_ll_nil -> Err (String ((Ascii (true, false,
+                             true, false, true, false, true, false)), (String
+                             ((Ascii (false, true, true, true, false, true,
+                             true, false)), (String ((Ascii (true, true,
+                             false, true, false, true, true, false)), (String
+                             ((Ascii (false, true, true, true, false, true,
+                             true, false)), (String ((Ascii (true, true,
+                             true, true, false, true, true, false)), (String
+                             ((Ascii (true, true, true, false, true, true,
+                             true, false)), (String ((Ascii (false, true,
+                             true, true, false, true, true, false)), (String
+                             ((Ascii (false, false, false, false, false,
+                             true, false, false)), (String ((Ascii (true,
+                             false, false, true, false, true, true, false)),
+                             (String ((Ascii (false, true, true, true, false,
+                             true, true, false)), (String ((Ascii (true,
+                             true, false, false, true, true, true, false)),
+                             (String ((Ascii (false, false, true, false,
+                             true, true, true, false)), (String ((Ascii
+                             (false, true, false, false, true, true, true,
+                             false)), (String ((Ascii (true, false, true,
+                             false, true, true, true, false)), (String
+                             ((Ascii (true, true, false, false, false, true,
+                             true, false)), (String ((Ascii (false, false,
+                             true, false, true, true, true, false)), (String
+                             ((Ascii (true, false, false, true, false, true,
+                             true, false)), (String ((Ascii (true, true,
+                             true, true, false, true, true, false)), (String
+                             ((Ascii (false, true, true, true, false, true,
+                             true, false)),
+                             EmptyString))))))))))))))))))))))))))))))))))))))
                          | Coq_ll_cons (b1, l3) ->
                              let Lazy l4 = Lazy.force l3 in
                              (match l4 with
-                                | Coq_ll_nil -> None
+                                | Coq_ll_nil -> Err (String ((Ascii (true,
+                                    false, true, false, true, false, true,
+                                    false)), (String ((Ascii (false, true,
+                                    true, true, false, true, true, false)),
+                                    (String ((Ascii (true, true, false, true,
+                                    false, true, true, false)), (String
+                                    ((Ascii (false, true, true, true, false,
+                                    true, true, false)), (String ((Ascii
+                                    (true, true, true, true, false, true,
+                                    true, false)), (String ((Ascii (true,
+                                    true, true, false, true, true, true,
+                                    false)), (String ((Ascii (false, true,
+                                    true, true, false, true, true, false)),
+                                    (String ((Ascii (false, false, false,
+                                    false, false, true, false, false)),
+                                    (String ((Ascii (true, false, false,
+                                    true, false, true, true, false)), (String
+                                    ((Ascii (false, true, true, true, false,
+                                    true, true, false)), (String ((Ascii
+                                    (true, true, false, false, true, true,
+                                    true, false)), (String ((Ascii (false,
+                                    false, true, false, true, true, true,
+                                    false)), (String ((Ascii (false, true,
+                                    false, false, true, true, true, false)),
+                                    (String ((Ascii (true, false, true,
+                                    false, true, true, true, false)), (String
+                                    ((Ascii (true, true, false, false, false,
+                                    true, true, false)), (String ((Ascii
+                                    (false, false, true, false, true, true,
+                                    true, false)), (String ((Ascii (true,
+                                    false, false, true, false, true, true,
+                                    false)), (String ((Ascii (true, true,
+                                    true, true, false, true, true, false)),
+                                    (String ((Ascii (false, true, true, true,
+                                    false, true, true, false)),
+                                    EmptyString))))))))))))))))))))))))))))))))))))))
                                 | Coq_ll_cons (b2, l5) ->
                                     let Lazy l6 = Lazy.force l5 in
                                     (match l6 with
-                                       | Coq_ll_nil -> None
+                                       | Coq_ll_nil -> Err (String ((Ascii
+                                           (true, false, true, false, true,
+                                           false, true, false)), (String
+                                           ((Ascii (false, true, true, true,
+                                           false, true, true, false)),
+                                           (String ((Ascii (true, true,
+                                           false, true, false, true, true,
+                                           false)), (String ((Ascii (false,
+                                           true, true, true, false, true,
+                                           true, false)), (String ((Ascii
+                                           (true, true, true, true, false,
+                                           true, true, false)), (String
+                                           ((Ascii (true, true, true, false,
+                                           true, true, true, false)), (String
+                                           ((Ascii (false, true, true, true,
+                                           false, true, true, false)),
+                                           (String ((Ascii (false, false,
+                                           false, false, false, true, false,
+                                           false)), (String ((Ascii (true,
+                                           false, false, true, false, true,
+                                           true, false)), (String ((Ascii
+                                           (false, true, true, true, false,
+                                           true, true, false)), (String
+                                           ((Ascii (true, true, false, false,
+                                           true, true, true, false)), (String
+                                           ((Ascii (false, false, true,
+                                           false, true, true, true, false)),
+                                           (String ((Ascii (false, true,
+                                           false, false, true, true, true,
+                                           false)), (String ((Ascii (true,
+                                           false, true, false, true, true,
+                                           true, false)), (String ((Ascii
+                                           (true, true, false, false, false,
+                                           true, true, false)), (String
+                                           ((Ascii (false, false, true,
+                                           false, true, true, true, false)),
+                                           (String ((Ascii (true, false,
+                                           false, true, false, true, true,
+                                           false)), (String ((Ascii (true,
+                                           true, true, true, false, true,
+                                           true, false)), (String ((Ascii
+                                           (false, true, true, true, false,
+                                           true, true, false)),
+                                           EmptyString))))))))))))))))))))))))))))))))))))))
                                        | Coq_ll_cons (
                                            b3, l7) ->
                                            let Lazy l8 = Lazy.force l7 in
                                            (match l8 with
-                                              | Coq_ll_nil -> None
+                                              | Coq_ll_nil -> Err (String
+                                                  ((Ascii (true, false, true,
+                                                  false, true, false, true,
+                                                  false)), (String ((Ascii
+                                                  (false, true, true, true,
+                                                  false, true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  EmptyString))))))))))))))))))))))))))))))))))))))
                                               | Coq_ll_cons (
                                                   b4, l9) ->
                                                   let Lazy l10 = Lazy.force
@@ -179,7 +436,64 @@ module Instruction =
                                                   (
                                                   match l10 with
                                                     | 
-                                                  Coq_ll_nil -> None
+                                                  Coq_ll_nil -> Err (String
+                                                  ((Ascii (true, false, true,
+                                                  false, true, false, true,
+                                                  false)), (String ((Ascii
+                                                  (false, true, true, true,
+                                                  false, true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  EmptyString))))))))))))))))))))))))))))))))))))))
                                                     | 
                                                   Coq_ll_cons
                                                   (reg_code2, l11) ->
@@ -190,98 +504,532 @@ module Instruction =
                                                   match 
                                                   reg_from_byte reg_code1 with
                                                     | 
-                                                  Some a ->
+                                                  OK a ->
                                                   (match 
                                                   reg_from_byte reg_code2 with
                                                     | 
-                                                  Some a0 -> Some
-                                                  (((Instr_and (a, (W (b4,
-                                                  b3, b2, b1)), a0)), (Npos
-                                                  (Coq_xI (Coq_xI Coq_xH)))),
-                                                  rst_ll)
+                                                  OK a0 -> OK (((Instr_and
+                                                  (a, (W (b4, b3, b2, b1)),
+                                                  a0)), (Npos (Coq_xI (Coq_xI
+                                                  Coq_xH)))), rst_ll)
                                                     | 
-                                                  None -> None)
+                                                  Err e -> Err e)
                                                     | 
-                                                  None -> None)))))))
+                                                  Err e -> Err e)))))))
            | B02 ->
                let Lazy l0 = Lazy.force l in
                (match l0 with
-                  | Coq_ll_nil -> None
+                  | Coq_ll_nil -> Err (String ((Ascii (true, false, true,
+                      false, true, false, true, false)), (String ((Ascii
+                      (false, true, true, true, false, true, true, false)),
+                      (String ((Ascii (true, true, false, true, false, true,
+                      true, false)), (String ((Ascii (false, true, true,
+                      true, false, true, true, false)), (String ((Ascii
+                      (true, true, true, true, false, true, true, false)),
+                      (String ((Ascii (true, true, true, false, true, true,
+                      true, false)), (String ((Ascii (false, true, true,
+                      true, false, true, true, false)), (String ((Ascii
+                      (false, false, false, false, false, true, false,
+                      false)), (String ((Ascii (true, false, false, true,
+                      false, true, true, false)), (String ((Ascii (false,
+                      true, true, true, false, true, true, false)), (String
+                      ((Ascii (true, true, false, false, true, true, true,
+                      false)), (String ((Ascii (false, false, true, false,
+                      true, true, true, false)), (String ((Ascii (false,
+                      true, false, false, true, true, true, false)), (String
+                      ((Ascii (true, false, true, false, true, true, true,
+                      false)), (String ((Ascii (true, true, false, false,
+                      false, true, true, false)), (String ((Ascii (false,
+                      false, true, false, true, true, true, false)), (String
+                      ((Ascii (true, false, false, true, false, true, true,
+                      false)), (String ((Ascii (true, true, true, true,
+                      false, true, true, false)), (String ((Ascii (false,
+                      true, true, true, false, true, true, false)),
+                      EmptyString))))))))))))))))))))))))))))))))))))))
                   | Coq_ll_cons (reg_code1, l1) ->
                       let Lazy l2 = Lazy.force l1 in
                       (match l2 with
-                         | Coq_ll_nil -> None
+                         | Coq_ll_nil -> Err (String ((Ascii (true, false,
+                             true, false, true, false, true, false)), (String
+                             ((Ascii (false, true, true, true, false, true,
+                             true, false)), (String ((Ascii (true, true,
+                             false, true, false, true, true, false)), (String
+                             ((Ascii (false, true, true, true, false, true,
+                             true, false)), (String ((Ascii (true, true,
+                             true, true, false, true, true, false)), (String
+                             ((Ascii (true, true, true, false, true, true,
+                             true, false)), (String ((Ascii (false, true,
+                             true, true, false, true, true, false)), (String
+                             ((Ascii (false, false, false, false, false,
+                             true, false, false)), (String ((Ascii (true,
+                             false, false, true, false, true, true, false)),
+                             (String ((Ascii (false, true, true, true, false,
+                             true, true, false)), (String ((Ascii (true,
+                             true, false, false, true, true, true, false)),
+                             (String ((Ascii (false, false, true, false,
+                             true, true, true, false)), (String ((Ascii
+                             (false, true, false, false, true, true, true,
+                             false)), (String ((Ascii (true, false, true,
+                             false, true, true, true, false)), (String
+                             ((Ascii (true, true, false, false, false, true,
+                             true, false)), (String ((Ascii (false, false,
+                             true, false, true, true, true, false)), (String
+                             ((Ascii (true, false, false, true, false, true,
+                             true, false)), (String ((Ascii (true, true,
+                             true, true, false, true, true, false)), (String
+                             ((Ascii (false, true, true, true, false, true,
+                             true, false)),
+                             EmptyString))))))))))))))))))))))))))))))))))))))
                          | Coq_ll_cons (reg_code2, l3) ->
                              let Lazy rst_ll = Lazy.force l3 in
                              (match reg_from_byte reg_code1 with
-                                | Some a ->
+                                | OK a ->
                                     (match reg_from_byte reg_code2 with
-                                       | Some a0 -> Some (((Instr_read (a,
-                                           a0)), (Npos (Coq_xI Coq_xH))),
-                                           rst_ll)
-                                       | None -> None)
-                                | None -> None)))
+                                       | OK a0 -> OK (((Instr_read (a, a0)),
+                                           (Npos (Coq_xI Coq_xH))), rst_ll)
+                                       | Err e -> Err e)
+                                | Err e -> Err e)))
            | B03 ->
                let Lazy l0 = Lazy.force l in
                (match l0 with
-                  | Coq_ll_nil -> None
+                  | Coq_ll_nil -> Err (String ((Ascii (true, false, true,
+                      false, true, false, true, false)), (String ((Ascii
+                      (false, true, true, true, false, true, true, false)),
+                      (String ((Ascii (true, true, false, true, false, true,
+                      true, false)), (String ((Ascii (false, true, true,
+                      true, false, true, true, false)), (String ((Ascii
+                      (true, true, true, true, false, true, true, false)),
+                      (String ((Ascii (true, true, true, false, true, true,
+                      true, false)), (String ((Ascii (false, true, true,
+                      true, false, true, true, false)), (String ((Ascii
+                      (false, false, false, false, false, true, false,
+                      false)), (String ((Ascii (true, false, false, true,
+                      false, true, true, false)), (String ((Ascii (false,
+                      true, true, true, false, true, true, false)), (String
+                      ((Ascii (true, true, false, false, true, true, true,
+                      false)), (String ((Ascii (false, false, true, false,
+                      true, true, true, false)), (String ((Ascii (false,
+                      true, false, false, true, true, true, false)), (String
+                      ((Ascii (true, false, true, false, true, true, true,
+                      false)), (String ((Ascii (true, true, false, false,
+                      false, true, true, false)), (String ((Ascii (false,
+                      false, true, false, true, true, true, false)), (String
+                      ((Ascii (true, false, false, true, false, true, true,
+                      false)), (String ((Ascii (true, true, true, true,
+                      false, true, true, false)), (String ((Ascii (false,
+                      true, true, true, false, true, true, false)),
+                      EmptyString))))))))))))))))))))))))))))))))))))))
                   | Coq_ll_cons (reg_code1, l1) ->
                       let Lazy l2 = Lazy.force l1 in
                       (match l2 with
-                         | Coq_ll_nil -> None
+                         | Coq_ll_nil -> Err (String ((Ascii (true, false,
+                             true, false, true, false, true, false)), (String
+                             ((Ascii (false, true, true, true, false, true,
+                             true, false)), (String ((Ascii (true, true,
+                             false, true, false, true, true, false)), (String
+                             ((Ascii (false, true, true, true, false, true,
+                             true, false)), (String ((Ascii (true, true,
+                             true, true, false, true, true, false)), (String
+                             ((Ascii (true, true, true, false, true, true,
+                             true, false)), (String ((Ascii (false, true,
+                             true, true, false, true, true, false)), (String
+                             ((Ascii (false, false, false, false, false,
+                             true, false, false)), (String ((Ascii (true,
+                             false, false, true, false, true, true, false)),
+                             (String ((Ascii (false, true, true, true, false,
+                             true, true, false)), (String ((Ascii (true,
+                             true, false, false, true, true, true, false)),
+                             (String ((Ascii (false, false, true, false,
+                             true, true, true, false)), (String ((Ascii
+                             (false, true, false, false, true, true, true,
+                             false)), (String ((Ascii (true, false, true,
+                             false, true, true, true, false)), (String
+                             ((Ascii (true, true, false, false, false, true,
+                             true, false)), (String ((Ascii (false, false,
+                             true, false, true, true, true, false)), (String
+                             ((Ascii (true, false, false, true, false, true,
+                             true, false)), (String ((Ascii (true, true,
+                             true, true, false, true, true, false)), (String
+                             ((Ascii (false, true, true, true, false, true,
+                             true, false)),
+                             EmptyString))))))))))))))))))))))))))))))))))))))
                          | Coq_ll_cons (reg_code2, l3) ->
                              let Lazy rst_ll = Lazy.force l3 in
                              (match reg_from_byte reg_code1 with
-                                | Some a ->
+                                | OK a ->
                                     (match reg_from_byte reg_code2 with
-                                       | Some a0 -> Some (((Instr_write (a,
-                                           a0)), (Npos (Coq_xI Coq_xH))),
-                                           rst_ll)
-                                       | None -> None)
-                                | None -> None)))
+                                       | OK a0 -> OK (((Instr_write (a, a0)),
+                                           (Npos (Coq_xI Coq_xH))), rst_ll)
+                                       | Err e -> Err e)
+                                | Err e -> Err e)))
            | B04 ->
                let Lazy l0 = Lazy.force l in
                (match l0 with
-                  | Coq_ll_nil -> None
+                  | Coq_ll_nil -> Err (String ((Ascii (true, false, true,
+                      false, true, false, true, false)), (String ((Ascii
+                      (false, true, true, true, false, true, true, false)),
+                      (String ((Ascii (true, true, false, true, false, true,
+                      true, false)), (String ((Ascii (false, true, true,
+                      true, false, true, true, false)), (String ((Ascii
+                      (true, true, true, true, false, true, true, false)),
+                      (String ((Ascii (true, true, true, false, true, true,
+                      true, false)), (String ((Ascii (false, true, true,
+                      true, false, true, true, false)), (String ((Ascii
+                      (false, false, false, false, false, true, false,
+                      false)), (String ((Ascii (true, false, false, true,
+                      false, true, true, false)), (String ((Ascii (false,
+                      true, true, true, false, true, true, false)), (String
+                      ((Ascii (true, true, false, false, true, true, true,
+                      false)), (String ((Ascii (false, false, true, false,
+                      true, true, true, false)), (String ((Ascii (false,
+                      true, false, false, true, true, true, false)), (String
+                      ((Ascii (true, false, true, false, true, true, true,
+                      false)), (String ((Ascii (true, true, false, false,
+                      false, true, true, false)), (String ((Ascii (false,
+                      false, true, false, true, true, true, false)), (String
+                      ((Ascii (true, false, false, true, false, true, true,
+                      false)), (String ((Ascii (true, true, true, true,
+                      false, true, true, false)), (String ((Ascii (false,
+                      true, true, true, false, true, true, false)),
+                      EmptyString))))))))))))))))))))))))))))))))))))))
                   | Coq_ll_cons (b1, l1) ->
                       let Lazy l2 = Lazy.force l1 in
                       (match l2 with
-                         | Coq_ll_nil -> None
+                         | Coq_ll_nil -> Err (String ((Ascii (true, false,
+                             true, false, true, false, true, false)), (String
+                             ((Ascii (false, true, true, true, false, true,
+                             true, false)), (String ((Ascii (true, true,
+                             false, true, false, true, true, false)), (String
+                             ((Ascii (false, true, true, true, false, true,
+                             true, false)), (String ((Ascii (true, true,
+                             true, true, false, true, true, false)), (String
+                             ((Ascii (true, true, true, false, true, true,
+                             true, false)), (String ((Ascii (false, true,
+                             true, true, false, true, true, false)), (String
+                             ((Ascii (false, false, false, false, false,
+                             true, false, false)), (String ((Ascii (true,
+                             false, false, true, false, true, true, false)),
+                             (String ((Ascii (false, true, true, true, false,
+                             true, true, false)), (String ((Ascii (true,
+                             true, false, false, true, true, true, false)),
+                             (String ((Ascii (false, false, true, false,
+                             true, true, true, false)), (String ((Ascii
+                             (false, true, false, false, true, true, true,
+                             false)), (String ((Ascii (true, false, true,
+                             false, true, true, true, false)), (String
+                             ((Ascii (true, true, false, false, false, true,
+                             true, false)), (String ((Ascii (false, false,
+                             true, false, true, true, true, false)), (String
+                             ((Ascii (true, false, false, true, false, true,
+                             true, false)), (String ((Ascii (true, true,
+                             true, true, false, true, true, false)), (String
+                             ((Ascii (false, true, true, true, false, true,
+                             true, false)),
+                             EmptyString))))))))))))))))))))))))))))))))))))))
                          | Coq_ll_cons (b2, l3) ->
                              let Lazy l4 = Lazy.force l3 in
                              (match l4 with
-                                | Coq_ll_nil -> None
+                                | Coq_ll_nil -> Err (String ((Ascii (true,
+                                    false, true, false, true, false, true,
+                                    false)), (String ((Ascii (false, true,
+                                    true, true, false, true, true, false)),
+                                    (String ((Ascii (true, true, false, true,
+                                    false, true, true, false)), (String
+                                    ((Ascii (false, true, true, true, false,
+                                    true, true, false)), (String ((Ascii
+                                    (true, true, true, true, false, true,
+                                    true, false)), (String ((Ascii (true,
+                                    true, true, false, true, true, true,
+                                    false)), (String ((Ascii (false, true,
+                                    true, true, false, true, true, false)),
+                                    (String ((Ascii (false, false, false,
+                                    false, false, true, false, false)),
+                                    (String ((Ascii (true, false, false,
+                                    true, false, true, true, false)), (String
+                                    ((Ascii (false, true, true, true, false,
+                                    true, true, false)), (String ((Ascii
+                                    (true, true, false, false, true, true,
+                                    true, false)), (String ((Ascii (false,
+                                    false, true, false, true, true, true,
+                                    false)), (String ((Ascii (false, true,
+                                    false, false, true, true, true, false)),
+                                    (String ((Ascii (true, false, true,
+                                    false, true, true, true, false)), (String
+                                    ((Ascii (true, true, false, false, false,
+                                    true, true, false)), (String ((Ascii
+                                    (false, false, true, false, true, true,
+                                    true, false)), (String ((Ascii (true,
+                                    false, false, true, false, true, true,
+                                    false)), (String ((Ascii (true, true,
+                                    true, true, false, true, true, false)),
+                                    (String ((Ascii (false, true, true, true,
+                                    false, true, true, false)),
+                                    EmptyString))))))))))))))))))))))))))))))))))))))
                                 | Coq_ll_cons (b3, l5) ->
                                     let Lazy l6 = Lazy.force l5 in
                                     (match l6 with
-                                       | Coq_ll_nil -> None
+                                       | Coq_ll_nil -> Err (String ((Ascii
+                                           (true, false, true, false, true,
+                                           false, true, false)), (String
+                                           ((Ascii (false, true, true, true,
+                                           false, true, true, false)),
+                                           (String ((Ascii (true, true,
+                                           false, true, false, true, true,
+                                           false)), (String ((Ascii (false,
+                                           true, true, true, false, true,
+                                           true, false)), (String ((Ascii
+                                           (true, true, true, true, false,
+                                           true, true, false)), (String
+                                           ((Ascii (true, true, true, false,
+                                           true, true, true, false)), (String
+                                           ((Ascii (false, true, true, true,
+                                           false, true, true, false)),
+                                           (String ((Ascii (false, false,
+                                           false, false, false, true, false,
+                                           false)), (String ((Ascii (true,
+                                           false, false, true, false, true,
+                                           true, false)), (String ((Ascii
+                                           (false, true, true, true, false,
+                                           true, true, false)), (String
+                                           ((Ascii (true, true, false, false,
+                                           true, true, true, false)), (String
+                                           ((Ascii (false, false, true,
+                                           false, true, true, true, false)),
+                                           (String ((Ascii (false, true,
+                                           false, false, true, true, true,
+                                           false)), (String ((Ascii (true,
+                                           false, true, false, true, true,
+                                           true, false)), (String ((Ascii
+                                           (true, true, false, false, false,
+                                           true, true, false)), (String
+                                           ((Ascii (false, false, true,
+                                           false, true, true, true, false)),
+                                           (String ((Ascii (true, false,
+                                           false, true, false, true, true,
+                                           false)), (String ((Ascii (true,
+                                           true, true, true, false, true,
+                                           true, false)), (String ((Ascii
+                                           (false, true, true, true, false,
+                                           true, true, false)),
+                                           EmptyString))))))))))))))))))))))))))))))))))))))
                                        | Coq_ll_cons (
                                            b4, l7) ->
                                            let Lazy rst_ll = Lazy.force l7 in
-                                           Some (((Instr_direct_jump (W (b4,
+                                           OK (((Instr_direct_jump (W (b4,
                                            b3, b2, b1))), (Npos (Coq_xI
                                            (Coq_xO Coq_xH)))), rst_ll)))))
            | B05 ->
                let Lazy l0 = Lazy.force l in
                (match l0 with
-                  | Coq_ll_nil -> None
+                  | Coq_ll_nil -> Err (String ((Ascii (true, false, true,
+                      false, true, false, true, false)), (String ((Ascii
+                      (false, true, true, true, false, true, true, false)),
+                      (String ((Ascii (true, true, false, true, false, true,
+                      true, false)), (String ((Ascii (false, true, true,
+                      true, false, true, true, false)), (String ((Ascii
+                      (true, true, true, true, false, true, true, false)),
+                      (String ((Ascii (true, true, true, false, true, true,
+                      true, false)), (String ((Ascii (false, true, true,
+                      true, false, true, true, false)), (String ((Ascii
+                      (false, false, false, false, false, true, false,
+                      false)), (String ((Ascii (true, false, false, true,
+                      false, true, true, false)), (String ((Ascii (false,
+                      true, true, true, false, true, true, false)), (String
+                      ((Ascii (true, true, false, false, true, true, true,
+                      false)), (String ((Ascii (false, false, true, false,
+                      true, true, true, false)), (String ((Ascii (false,
+                      true, false, false, true, true, true, false)), (String
+                      ((Ascii (true, false, true, false, true, true, true,
+                      false)), (String ((Ascii (true, true, false, false,
+                      false, true, true, false)), (String ((Ascii (false,
+                      false, true, false, true, true, true, false)), (String
+                      ((Ascii (true, false, false, true, false, true, true,
+                      false)), (String ((Ascii (true, true, true, true,
+                      false, true, true, false)), (String ((Ascii (false,
+                      true, true, true, false, true, true, false)),
+                      EmptyString))))))))))))))))))))))))))))))))))))))
                   | Coq_ll_cons (reg_code1, l1) ->
                       let Lazy l2 = Lazy.force l1 in
                       (match l2 with
-                         | Coq_ll_nil -> None
+                         | Coq_ll_nil -> Err (String ((Ascii (true, false,
+                             true, false, true, false, true, false)), (String
+                             ((Ascii (false, true, true, true, false, true,
+                             true, false)), (String ((Ascii (true, true,
+                             false, true, false, true, true, false)), (String
+                             ((Ascii (false, true, true, true, false, true,
+                             true, false)), (String ((Ascii (true, true,
+                             true, true, false, true, true, false)), (String
+                             ((Ascii (true, true, true, false, true, true,
+                             true, false)), (String ((Ascii (false, true,
+                             true, true, false, true, true, false)), (String
+                             ((Ascii (false, false, false, false, false,
+                             true, false, false)), (String ((Ascii (true,
+                             false, false, true, false, true, true, false)),
+                             (String ((Ascii (false, true, true, true, false,
+                             true, true, false)), (String ((Ascii (true,
+                             true, false, false, true, true, true, false)),
+                             (String ((Ascii (false, false, true, false,
+                             true, true, true, false)), (String ((Ascii
+                             (false, true, false, false, true, true, true,
+                             false)), (String ((Ascii (true, false, true,
+                             false, true, true, true, false)), (String
+                             ((Ascii (true, true, false, false, false, true,
+                             true, false)), (String ((Ascii (false, false,
+                             true, false, true, true, true, false)), (String
+                             ((Ascii (true, false, false, true, false, true,
+                             true, false)), (String ((Ascii (true, true,
+                             true, true, false, true, true, false)), (String
+                             ((Ascii (false, true, true, true, false, true,
+                             true, false)),
+                             EmptyString))))))))))))))))))))))))))))))))))))))
                          | Coq_ll_cons (b1, l3) ->
                              let Lazy l4 = Lazy.force l3 in
                              (match l4 with
-                                | Coq_ll_nil -> None
+                                | Coq_ll_nil -> Err (String ((Ascii (true,
+                                    false, true, false, true, false, true,
+                                    false)), (String ((Ascii (false, true,
+                                    true, true, false, true, true, false)),
+                                    (String ((Ascii (true, true, false, true,
+                                    false, true, true, false)), (String
+                                    ((Ascii (false, true, true, true, false,
+                                    true, true, false)), (String ((Ascii
+                                    (true, true, true, true, false, true,
+                                    true, false)), (String ((Ascii (true,
+                                    true, true, false, true, true, true,
+                                    false)), (String ((Ascii (false, true,
+                                    true, true, false, true, true, false)),
+                                    (String ((Ascii (false, false, false,
+                                    false, false, true, false, false)),
+                                    (String ((Ascii (true, false, false,
+                                    true, false, true, true, false)), (String
+                                    ((Ascii (false, true, true, true, false,
+                                    true, true, false)), (String ((Ascii
+                                    (true, true, false, false, true, true,
+                                    true, false)), (String ((Ascii (false,
+                                    false, true, false, true, true, true,
+                                    false)), (String ((Ascii (false, true,
+                                    false, false, true, true, true, false)),
+                                    (String ((Ascii (true, false, true,
+                                    false, true, true, true, false)), (String
+                                    ((Ascii (true, true, false, false, false,
+                                    true, true, false)), (String ((Ascii
+                                    (false, false, true, false, true, true,
+                                    true, false)), (String ((Ascii (true,
+                                    false, false, true, false, true, true,
+                                    false)), (String ((Ascii (true, true,
+                                    true, true, false, true, true, false)),
+                                    (String ((Ascii (false, true, true, true,
+                                    false, true, true, false)),
+                                    EmptyString))))))))))))))))))))))))))))))))))))))
                                 | Coq_ll_cons (b2, l5) ->
                                     let Lazy l6 = Lazy.force l5 in
                                     (match l6 with
-                                       | Coq_ll_nil -> None
+                                       | Coq_ll_nil -> Err (String ((Ascii
+                                           (true, false, true, false, true,
+                                           false, true, false)), (String
+                                           ((Ascii (false, true, true, true,
+                                           false, true, true, false)),
+                                           (String ((Ascii (true, true,
+                                           false, true, false, true, true,
+                                           false)), (String ((Ascii (false,
+                                           true, true, true, false, true,
+                                           true, false)), (String ((Ascii
+                                           (true, true, true, true, false,
+                                           true, true, false)), (String
+                                           ((Ascii (true, true, true, false,
+                                           true, true, true, false)), (String
+                                           ((Ascii (false, true, true, true,
+                                           false, true, true, false)),
+                                           (String ((Ascii (false, false,
+                                           false, false, false, true, false,
+                                           false)), (String ((Ascii (true,
+                                           false, false, true, false, true,
+                                           true, false)), (String ((Ascii
+                                           (false, true, true, true, false,
+                                           true, true, false)), (String
+                                           ((Ascii (true, true, false, false,
+                                           true, true, true, false)), (String
+                                           ((Ascii (false, false, true,
+                                           false, true, true, true, false)),
+                                           (String ((Ascii (false, true,
+                                           false, false, true, true, true,
+                                           false)), (String ((Ascii (true,
+                                           false, true, false, true, true,
+                                           true, false)), (String ((Ascii
+                                           (true, true, false, false, false,
+                                           true, true, false)), (String
+                                           ((Ascii (false, false, true,
+                                           false, true, true, true, false)),
+                                           (String ((Ascii (true, false,
+                                           false, true, false, true, true,
+                                           false)), (String ((Ascii (true,
+                                           true, true, true, false, true,
+                                           true, false)), (String ((Ascii
+                                           (false, true, true, true, false,
+                                           true, true, false)),
+                                           EmptyString))))))))))))))))))))))))))))))))))))))
                                        | Coq_ll_cons (
                                            b3, l7) ->
                                            let Lazy l8 = Lazy.force l7 in
                                            (match l8 with
-                                              | Coq_ll_nil -> None
+                                              | Coq_ll_nil -> Err (String
+                                                  ((Ascii (true, false, true,
+                                                  false, true, false, true,
+                                                  false)), (String ((Ascii
+                                                  (false, true, true, true,
+                                                  false, true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  EmptyString))))))))))))))))))))))))))))))))))))))
                                               | Coq_ll_cons (
                                                   b4, l9) ->
                                                   let Lazy rst_ll =
@@ -291,28 +1039,77 @@ module Instruction =
                                                   match 
                                                   reg_from_byte reg_code1 with
                                                     | 
-                                                  Some a -> Some
+                                                  OK a -> OK
                                                   (((Instr_direct_cond_jump
                                                   (a, (W (b4, b3, b2, b1)))),
                                                   (Npos (Coq_xO (Coq_xI
                                                   Coq_xH)))), rst_ll)
                                                     | 
-                                                  None -> None))))))
+                                                  Err e -> Err e))))))
            | B06 ->
                let Lazy l0 = Lazy.force l in
                (match l0 with
-                  | Coq_ll_nil -> None
+                  | Coq_ll_nil -> Err (String ((Ascii (true, false, true,
+                      false, true, false, true, false)), (String ((Ascii
+                      (false, true, true, true, false, true, true, false)),
+                      (String ((Ascii (true, true, false, true, false, true,
+                      true, false)), (String ((Ascii (false, true, true,
+                      true, false, true, true, false)), (String ((Ascii
+                      (true, true, true, true, false, true, true, false)),
+                      (String ((Ascii (true, true, true, false, true, true,
+                      true, false)), (String ((Ascii (false, true, true,
+                      true, false, true, true, false)), (String ((Ascii
+                      (false, false, false, false, false, true, false,
+                      false)), (String ((Ascii (true, false, false, true,
+                      false, true, true, false)), (String ((Ascii (false,
+                      true, true, true, false, true, true, false)), (String
+                      ((Ascii (true, true, false, false, true, true, true,
+                      false)), (String ((Ascii (false, false, true, false,
+                      true, true, true, false)), (String ((Ascii (false,
+                      true, false, false, true, true, true, false)), (String
+                      ((Ascii (true, false, true, false, true, true, true,
+                      false)), (String ((Ascii (true, true, false, false,
+                      false, true, true, false)), (String ((Ascii (false,
+                      false, true, false, true, true, true, false)), (String
+                      ((Ascii (true, false, false, true, false, true, true,
+                      false)), (String ((Ascii (true, true, true, true,
+                      false, true, true, false)), (String ((Ascii (false,
+                      true, true, true, false, true, true, false)),
+                      EmptyString))))))))))))))))))))))))))))))))))))))
                   | Coq_ll_cons (reg_code1, l1) ->
                       let Lazy rst_ll = Lazy.force l1 in
                       (match reg_from_byte reg_code1 with
-                         | Some a -> Some (((Instr_indirect_jump a), (Npos
+                         | OK a -> OK (((Instr_indirect_jump a), (Npos
                              (Coq_xO Coq_xH))), rst_ll)
-                         | None -> None))
+                         | Err e -> Err e))
            | B07 ->
                let Lazy rst_ll = Lazy.force l in
-               Some (((Instr_os_call (W (byte0, byte0, byte0, byte0))), (Npos
+               OK (((Instr_os_call (W (byte0, byte0, byte0, byte0))), (Npos
                Coq_xH)), rst_ll)
-           | _ -> None)
+           | _ -> Err (String ((Ascii (true, false, true, false, true, false,
+               true, false)), (String ((Ascii (false, true, true, true,
+               false, true, true, false)), (String ((Ascii (true, true,
+               false, true, false, true, true, false)), (String ((Ascii
+               (false, true, true, true, false, true, true, false)), (String
+               ((Ascii (true, true, true, true, false, true, true, false)),
+               (String ((Ascii (true, true, true, false, true, true, true,
+               false)), (String ((Ascii (false, true, true, true, false,
+               true, true, false)), (String ((Ascii (false, false, false,
+               false, false, true, false, false)), (String ((Ascii (true,
+               false, false, true, false, true, true, false)), (String
+               ((Ascii (false, true, true, true, false, true, true, false)),
+               (String ((Ascii (true, true, false, false, true, true, true,
+               false)), (String ((Ascii (false, false, true, false, true,
+               true, true, false)), (String ((Ascii (false, true, false,
+               false, true, true, true, false)), (String ((Ascii (true,
+               false, true, false, true, true, true, false)), (String ((Ascii
+               (true, true, false, false, false, true, true, false)), (String
+               ((Ascii (false, false, true, false, true, true, true, false)),
+               (String ((Ascii (true, false, false, true, false, true, true,
+               false)), (String ((Ascii (true, true, true, true, false, true,
+               true, false)), (String ((Ascii (false, true, true, true,
+               false, true, true, false)),
+               EmptyString)))))))))))))))))))))))))))))))))))))))
   
   type coq_R_parse_instruction =
     | R_parse_instruction_0 of byte lazy_list
@@ -322,29 +1119,34 @@ module Instruction =
        register * register
     | R_parse_instruction_3 of byte lazy_list * byte * 
        byte * byte * byte * byte * byte * byte lazy_list * 
-       register
+       register * string
     | R_parse_instruction_4 of byte lazy_list * byte * 
-       byte * byte * byte * byte * byte * byte lazy_list
+       byte * byte * byte * byte * byte * byte lazy_list * 
+       string
     | R_parse_instruction_5 of byte lazy_list * byte * 
        byte * byte lazy_list * register * register
     | R_parse_instruction_6 of byte lazy_list * byte * 
-       byte * byte lazy_list * register
-    | R_parse_instruction_7 of byte lazy_list * byte * byte * byte lazy_list
+       byte * byte lazy_list * register * string
+    | R_parse_instruction_7 of byte lazy_list * byte * 
+       byte * byte lazy_list * string
     | R_parse_instruction_8 of byte lazy_list * byte * 
        byte * byte lazy_list * register * register
     | R_parse_instruction_9 of byte lazy_list * byte * 
-       byte * byte lazy_list * register
-    | R_parse_instruction_10 of byte lazy_list * byte * byte * byte lazy_list
+       byte * byte lazy_list * register * string
+    | R_parse_instruction_10 of byte lazy_list * byte * 
+       byte * byte lazy_list * string
     | R_parse_instruction_11 of byte lazy_list * byte * 
        byte * byte * byte * byte lazy_list
     | R_parse_instruction_12 of byte lazy_list * byte * 
        byte * byte * byte * byte * byte lazy_list * 
        register
     | R_parse_instruction_13 of byte lazy_list * byte * 
-       byte * byte * byte * byte * byte lazy_list
+       byte * byte * byte * byte * byte lazy_list * 
+       string
     | R_parse_instruction_14 of byte lazy_list * byte * 
        byte lazy_list * register
-    | R_parse_instruction_15 of byte lazy_list * byte * byte lazy_list
+    | R_parse_instruction_15 of byte lazy_list * byte * 
+       byte lazy_list * string
     | R_parse_instruction_16 of byte lazy_list * byte lazy_list
     | R_parse_instruction_17 of byte lazy_list * byte lazy_list
   
@@ -353,52 +1155,55 @@ module Instruction =
       lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte ->
       byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ ->
       register -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte ->
-      byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ -> __ ->
-      'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte -> byte -> byte
-      -> byte lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte ->
-      byte -> byte lazy_list -> __ -> register -> __ -> register -> __ ->
-      'a1) -> (byte lazy_list -> byte -> byte -> byte lazy_list -> __ ->
-      register -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte
-      lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte ->
-      byte lazy_list -> __ -> register -> __ -> register -> __ -> 'a1) ->
+      byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ ->
+      string -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte
+      -> byte -> byte -> byte lazy_list -> __ -> string -> __ -> 'a1) ->
       (byte lazy_list -> byte -> byte -> byte lazy_list -> __ -> register ->
-      __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte lazy_list
-      -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte
-      -> byte lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte -> byte ->
-      byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ -> 'a1)
-      -> (byte lazy_list -> byte -> byte -> byte -> byte -> byte -> byte
-      lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte
-      lazy_list -> __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte ->
-      byte lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte lazy_list
-      -> __ -> 'a1) -> (byte lazy_list -> byte lazy_list -> __ -> __ -> 'a1)
-      -> byte lazy_list -> ((instruction * coq_N) * byte lazy_list) option ->
-      coq_R_parse_instruction -> 'a1 **)
+      __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte
+      lazy_list -> __ -> register -> __ -> string -> __ -> 'a1) -> (byte
+      lazy_list -> byte -> byte -> byte lazy_list -> __ -> string -> __ ->
+      'a1) -> (byte lazy_list -> byte -> byte -> byte lazy_list -> __ ->
+      register -> __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte ->
+      byte -> byte lazy_list -> __ -> register -> __ -> string -> __ -> 'a1)
+      -> (byte lazy_list -> byte -> byte -> byte lazy_list -> __ -> string ->
+      __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte -> byte
+      lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte ->
+      byte -> byte -> byte lazy_list -> __ -> register -> __ -> 'a1) -> (byte
+      lazy_list -> byte -> byte -> byte -> byte -> byte -> byte lazy_list ->
+      __ -> string -> __ -> 'a1) -> (byte lazy_list -> byte -> byte lazy_list
+      -> __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte -> byte
+      lazy_list -> __ -> string -> __ -> 'a1) -> (byte lazy_list -> byte
+      lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte lazy_list -> __ ->
+      __ -> 'a1) -> byte lazy_list -> ((instruction * coq_N) * byte
+      lazy_list) res -> coq_R_parse_instruction -> 'a1 **)
   
-  let coq_R_parse_instruction_rect addr f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 f13 f14 f15 f16 ll o = function
+  let coq_R_parse_instruction_rect addr f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 f13 f14 f15 f16 ll r = function
     | R_parse_instruction_0 x -> f x __
     | R_parse_instruction_1 (x, x0) -> f0 x x0 __
     | R_parse_instruction_2 (x, x0, x1, x2, x3, x4, x5, x6, x7, x8) ->
         f1 x x0 x1 x2 x3 x4 x5 x6 __ x7 __ x8 __
-    | R_parse_instruction_3 (x, x0, x1, x2, x3, x4, x5, x6, x7) ->
-        f2 x x0 x1 x2 x3 x4 x5 x6 __ x7 __ __
-    | R_parse_instruction_4 (x, x0, x1, x2, x3, x4, x5, x6) ->
-        f3 x x0 x1 x2 x3 x4 x5 x6 __ __
+    | R_parse_instruction_3 (x, x0, x1, x2, x3, x4, x5, x6, x7, x8) ->
+        f2 x x0 x1 x2 x3 x4 x5 x6 __ x7 __ x8 __
+    | R_parse_instruction_4 (x, x0, x1, x2, x3, x4, x5, x6, x7) ->
+        f3 x x0 x1 x2 x3 x4 x5 x6 __ x7 __
     | R_parse_instruction_5 (x, x0, x1, x2, x3, x4) ->
         f4 x x0 x1 x2 __ x3 __ x4 __
-    | R_parse_instruction_6 (x, x0, x1, x2, x3) -> f5 x x0 x1 x2 __ x3 __ __
-    | R_parse_instruction_7 (x, x0, x1, x2) -> f6 x x0 x1 x2 __ __
+    | R_parse_instruction_6 (x, x0, x1, x2, x3, x4) ->
+        f5 x x0 x1 x2 __ x3 __ x4 __
+    | R_parse_instruction_7 (x, x0, x1, x2, x3) -> f6 x x0 x1 x2 __ x3 __
     | R_parse_instruction_8 (x, x0, x1, x2, x3, x4) ->
         f7 x x0 x1 x2 __ x3 __ x4 __
-    | R_parse_instruction_9 (x, x0, x1, x2, x3) -> f8 x x0 x1 x2 __ x3 __ __
-    | R_parse_instruction_10 (x, x0, x1, x2) -> f9 x x0 x1 x2 __ __
+    | R_parse_instruction_9 (x, x0, x1, x2, x3, x4) ->
+        f8 x x0 x1 x2 __ x3 __ x4 __
+    | R_parse_instruction_10 (x, x0, x1, x2, x3) -> f9 x x0 x1 x2 __ x3 __
     | R_parse_instruction_11 (x, x0, x1, x2, x3, x4) ->
         f10 x x0 x1 x2 x3 x4 __
     | R_parse_instruction_12 (x, x0, x1, x2, x3, x4, x5, x6) ->
         f11 x x0 x1 x2 x3 x4 x5 __ x6 __
-    | R_parse_instruction_13 (x, x0, x1, x2, x3, x4, x5) ->
-        f12 x x0 x1 x2 x3 x4 x5 __ __
+    | R_parse_instruction_13 (x, x0, x1, x2, x3, x4, x5, x6) ->
+        f12 x x0 x1 x2 x3 x4 x5 __ x6 __
     | R_parse_instruction_14 (x, x0, x1, x2) -> f13 x x0 x1 __ x2 __
-    | R_parse_instruction_15 (x, x0, x1) -> f14 x x0 x1 __ __
+    | R_parse_instruction_15 (x, x0, x1, x2) -> f14 x x0 x1 __ x2 __
     | R_parse_instruction_16 (x, x0) -> f15 x x0 __
     | R_parse_instruction_17 (x, x0) -> f16 x x0 __ __
   
@@ -407,52 +1212,55 @@ module Instruction =
       lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte ->
       byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ ->
       register -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte ->
-      byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ -> __ ->
-      'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte -> byte -> byte
-      -> byte lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte ->
-      byte -> byte lazy_list -> __ -> register -> __ -> register -> __ ->
-      'a1) -> (byte lazy_list -> byte -> byte -> byte lazy_list -> __ ->
-      register -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte
-      lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte ->
-      byte lazy_list -> __ -> register -> __ -> register -> __ -> 'a1) ->
+      byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ ->
+      string -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte
+      -> byte -> byte -> byte lazy_list -> __ -> string -> __ -> 'a1) ->
       (byte lazy_list -> byte -> byte -> byte lazy_list -> __ -> register ->
-      __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte lazy_list
-      -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte
-      -> byte lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte -> byte ->
-      byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ -> 'a1)
-      -> (byte lazy_list -> byte -> byte -> byte -> byte -> byte -> byte
-      lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte
-      lazy_list -> __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte ->
-      byte lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte lazy_list
-      -> __ -> 'a1) -> (byte lazy_list -> byte lazy_list -> __ -> __ -> 'a1)
-      -> byte lazy_list -> ((instruction * coq_N) * byte lazy_list) option ->
-      coq_R_parse_instruction -> 'a1 **)
+      __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte
+      lazy_list -> __ -> register -> __ -> string -> __ -> 'a1) -> (byte
+      lazy_list -> byte -> byte -> byte lazy_list -> __ -> string -> __ ->
+      'a1) -> (byte lazy_list -> byte -> byte -> byte lazy_list -> __ ->
+      register -> __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte ->
+      byte -> byte lazy_list -> __ -> register -> __ -> string -> __ -> 'a1)
+      -> (byte lazy_list -> byte -> byte -> byte lazy_list -> __ -> string ->
+      __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte -> byte
+      lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte ->
+      byte -> byte -> byte lazy_list -> __ -> register -> __ -> 'a1) -> (byte
+      lazy_list -> byte -> byte -> byte -> byte -> byte -> byte lazy_list ->
+      __ -> string -> __ -> 'a1) -> (byte lazy_list -> byte -> byte lazy_list
+      -> __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte -> byte
+      lazy_list -> __ -> string -> __ -> 'a1) -> (byte lazy_list -> byte
+      lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte lazy_list -> __ ->
+      __ -> 'a1) -> byte lazy_list -> ((instruction * coq_N) * byte
+      lazy_list) res -> coq_R_parse_instruction -> 'a1 **)
   
-  let coq_R_parse_instruction_rec addr f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 f13 f14 f15 f16 ll o = function
+  let coq_R_parse_instruction_rec addr f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 f13 f14 f15 f16 ll r = function
     | R_parse_instruction_0 x -> f x __
     | R_parse_instruction_1 (x, x0) -> f0 x x0 __
     | R_parse_instruction_2 (x, x0, x1, x2, x3, x4, x5, x6, x7, x8) ->
         f1 x x0 x1 x2 x3 x4 x5 x6 __ x7 __ x8 __
-    | R_parse_instruction_3 (x, x0, x1, x2, x3, x4, x5, x6, x7) ->
-        f2 x x0 x1 x2 x3 x4 x5 x6 __ x7 __ __
-    | R_parse_instruction_4 (x, x0, x1, x2, x3, x4, x5, x6) ->
-        f3 x x0 x1 x2 x3 x4 x5 x6 __ __
+    | R_parse_instruction_3 (x, x0, x1, x2, x3, x4, x5, x6, x7, x8) ->
+        f2 x x0 x1 x2 x3 x4 x5 x6 __ x7 __ x8 __
+    | R_parse_instruction_4 (x, x0, x1, x2, x3, x4, x5, x6, x7) ->
+        f3 x x0 x1 x2 x3 x4 x5 x6 __ x7 __
     | R_parse_instruction_5 (x, x0, x1, x2, x3, x4) ->
         f4 x x0 x1 x2 __ x3 __ x4 __
-    | R_parse_instruction_6 (x, x0, x1, x2, x3) -> f5 x x0 x1 x2 __ x3 __ __
-    | R_parse_instruction_7 (x, x0, x1, x2) -> f6 x x0 x1 x2 __ __
+    | R_parse_instruction_6 (x, x0, x1, x2, x3, x4) ->
+        f5 x x0 x1 x2 __ x3 __ x4 __
+    | R_parse_instruction_7 (x, x0, x1, x2, x3) -> f6 x x0 x1 x2 __ x3 __
     | R_parse_instruction_8 (x, x0, x1, x2, x3, x4) ->
         f7 x x0 x1 x2 __ x3 __ x4 __
-    | R_parse_instruction_9 (x, x0, x1, x2, x3) -> f8 x x0 x1 x2 __ x3 __ __
-    | R_parse_instruction_10 (x, x0, x1, x2) -> f9 x x0 x1 x2 __ __
+    | R_parse_instruction_9 (x, x0, x1, x2, x3, x4) ->
+        f8 x x0 x1 x2 __ x3 __ x4 __
+    | R_parse_instruction_10 (x, x0, x1, x2, x3) -> f9 x x0 x1 x2 __ x3 __
     | R_parse_instruction_11 (x, x0, x1, x2, x3, x4) ->
         f10 x x0 x1 x2 x3 x4 __
     | R_parse_instruction_12 (x, x0, x1, x2, x3, x4, x5, x6) ->
         f11 x x0 x1 x2 x3 x4 x5 __ x6 __
-    | R_parse_instruction_13 (x, x0, x1, x2, x3, x4, x5) ->
-        f12 x x0 x1 x2 x3 x4 x5 __ __
+    | R_parse_instruction_13 (x, x0, x1, x2, x3, x4, x5, x6) ->
+        f12 x x0 x1 x2 x3 x4 x5 __ x6 __
     | R_parse_instruction_14 (x, x0, x1, x2) -> f13 x x0 x1 __ x2 __
-    | R_parse_instruction_15 (x, x0, x1) -> f14 x x0 x1 __ __
+    | R_parse_instruction_15 (x, x0, x1, x2) -> f14 x x0 x1 __ x2 __
     | R_parse_instruction_16 (x, x0) -> f15 x x0 __
     | R_parse_instruction_17 (x, x0) -> f16 x x0 __ __
   
@@ -461,25 +1269,26 @@ module Instruction =
       lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte ->
       byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ ->
       register -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte ->
-      byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ -> __ ->
-      'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte -> byte -> byte
-      -> byte lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte ->
-      byte -> byte lazy_list -> __ -> register -> __ -> register -> __ ->
-      'a1) -> (byte lazy_list -> byte -> byte -> byte lazy_list -> __ ->
-      register -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte
-      lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte ->
-      byte lazy_list -> __ -> register -> __ -> register -> __ -> 'a1) ->
+      byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ ->
+      string -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte
+      -> byte -> byte -> byte lazy_list -> __ -> string -> __ -> 'a1) ->
       (byte lazy_list -> byte -> byte -> byte lazy_list -> __ -> register ->
-      __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte lazy_list
-      -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte
-      -> byte lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte -> byte ->
-      byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ -> 'a1)
-      -> (byte lazy_list -> byte -> byte -> byte -> byte -> byte -> byte
-      lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte
-      lazy_list -> __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte ->
-      byte lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte lazy_list
-      -> __ -> 'a1) -> (byte lazy_list -> byte lazy_list -> __ -> __ -> 'a1)
-      -> byte lazy_list -> 'a1 **)
+      __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte
+      lazy_list -> __ -> register -> __ -> string -> __ -> 'a1) -> (byte
+      lazy_list -> byte -> byte -> byte lazy_list -> __ -> string -> __ ->
+      'a1) -> (byte lazy_list -> byte -> byte -> byte lazy_list -> __ ->
+      register -> __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte ->
+      byte -> byte lazy_list -> __ -> register -> __ -> string -> __ -> 'a1)
+      -> (byte lazy_list -> byte -> byte -> byte lazy_list -> __ -> string ->
+      __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte -> byte
+      lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte ->
+      byte -> byte -> byte lazy_list -> __ -> register -> __ -> 'a1) -> (byte
+      lazy_list -> byte -> byte -> byte -> byte -> byte -> byte lazy_list ->
+      __ -> string -> __ -> 'a1) -> (byte lazy_list -> byte -> byte lazy_list
+      -> __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte -> byte
+      lazy_list -> __ -> string -> __ -> 'a1) -> (byte lazy_list -> byte
+      lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte lazy_list -> __ ->
+      __ -> 'a1) -> byte lazy_list -> 'a1 **)
   
   let parse_instruction_rect addr f16 f15 f14 f13 f12 f11 f10 f9 f8 f7 f6 f5 f4 f3 f2 f1 f0 f ll =
     let f17 = f16 ll in
@@ -558,18 +1367,18 @@ module Instruction =
                                                   match 
                                                   reg_from_byte x0 with
                                                     | 
-                                                  Some r ->
+                                                  OK r ->
                                                   let f39 = f37 r __ in
                                                   let f40 = f36 r __ in
                                                   (
                                                   match 
                                                   reg_from_byte x5 with
                                                     | 
-                                                  Some r0 -> f40 r0 __
+                                                  OK r0 -> f40 r0 __
                                                     | 
-                                                  None -> f39 __)
+                                                  Err s -> f39 s __)
                                                     | 
-                                                  None -> f38 __)))))))
+                                                  Err s -> f38 s __)))))))
               | B02 ->
                   let Lazy l0 = Lazy.force l in
                   (match l0 with
@@ -584,13 +1393,13 @@ module Instruction =
                                 let f37 = f23 x0 x1 l4 __ in
                                 let f38 = f24 x0 x1 l4 __ in
                                 (match reg_from_byte x0 with
-                                   | Some r ->
+                                   | OK r ->
                                        let f39 = f37 r __ in
                                        let f40 = f36 r __ in
                                        (match reg_from_byte x1 with
-                                          | Some r0 -> f40 r0 __
-                                          | None -> f39 __)
-                                   | None -> f38 __)))
+                                          | OK r0 -> f40 r0 __
+                                          | Err s -> f39 s __)
+                                   | Err s -> f38 s __)))
               | B03 ->
                   let Lazy l0 = Lazy.force l in
                   (match l0 with
@@ -605,13 +1414,13 @@ module Instruction =
                                 let f37 = f26 x0 x1 l4 __ in
                                 let f38 = f27 x0 x1 l4 __ in
                                 (match reg_from_byte x0 with
-                                   | Some r ->
+                                   | OK r ->
                                        let f39 = f37 r __ in
                                        let f40 = f36 r __ in
                                        (match reg_from_byte x1 with
-                                          | Some r0 -> f40 r0 __
-                                          | None -> f39 __)
-                                   | None -> f38 __)))
+                                          | OK r0 -> f40 r0 __
+                                          | Err s -> f39 s __)
+                                   | Err s -> f38 s __)))
               | B04 ->
                   let Lazy l0 = Lazy.force l in
                   (match l0 with
@@ -668,9 +1477,9 @@ module Instruction =
                                                  (match 
                                                   reg_from_byte x0 with
                                                     | 
-                                                  Some r -> f36 r __
+                                                  OK r -> f36 r __
                                                     | 
-                                                  None -> f37 __))))))
+                                                  Err s -> f37 s __))))))
               | B06 ->
                   let Lazy l0 = Lazy.force l in
                   (match l0 with
@@ -680,8 +1489,8 @@ module Instruction =
                          let f36 = f31 x0 l2 __ in
                          let f37 = f32 x0 l2 __ in
                          (match reg_from_byte x0 with
-                            | Some r -> f36 r __
-                            | None -> f37 __))
+                            | OK r -> f36 r __
+                            | Err s -> f37 s __))
               | B07 -> let Lazy l0 = Lazy.force l in f33 l0 __
               | _ -> f35 __))
   
@@ -690,56 +1499,59 @@ module Instruction =
       lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte ->
       byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ ->
       register -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte ->
-      byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ -> __ ->
-      'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte -> byte -> byte
-      -> byte lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte ->
-      byte -> byte lazy_list -> __ -> register -> __ -> register -> __ ->
-      'a1) -> (byte lazy_list -> byte -> byte -> byte lazy_list -> __ ->
-      register -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte
-      lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte ->
-      byte lazy_list -> __ -> register -> __ -> register -> __ -> 'a1) ->
+      byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ ->
+      string -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte
+      -> byte -> byte -> byte lazy_list -> __ -> string -> __ -> 'a1) ->
       (byte lazy_list -> byte -> byte -> byte lazy_list -> __ -> register ->
-      __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte lazy_list
-      -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte
-      -> byte lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte -> byte ->
-      byte -> byte -> byte -> byte lazy_list -> __ -> register -> __ -> 'a1)
-      -> (byte lazy_list -> byte -> byte -> byte -> byte -> byte -> byte
-      lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte -> byte
-      lazy_list -> __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte ->
-      byte lazy_list -> __ -> __ -> 'a1) -> (byte lazy_list -> byte lazy_list
-      -> __ -> 'a1) -> (byte lazy_list -> byte lazy_list -> __ -> __ -> 'a1)
-      -> byte lazy_list -> 'a1 **)
+      __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte
+      lazy_list -> __ -> register -> __ -> string -> __ -> 'a1) -> (byte
+      lazy_list -> byte -> byte -> byte lazy_list -> __ -> string -> __ ->
+      'a1) -> (byte lazy_list -> byte -> byte -> byte lazy_list -> __ ->
+      register -> __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte ->
+      byte -> byte lazy_list -> __ -> register -> __ -> string -> __ -> 'a1)
+      -> (byte lazy_list -> byte -> byte -> byte lazy_list -> __ -> string ->
+      __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte -> byte -> byte
+      lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte -> byte -> byte ->
+      byte -> byte -> byte lazy_list -> __ -> register -> __ -> 'a1) -> (byte
+      lazy_list -> byte -> byte -> byte -> byte -> byte -> byte lazy_list ->
+      __ -> string -> __ -> 'a1) -> (byte lazy_list -> byte -> byte lazy_list
+      -> __ -> register -> __ -> 'a1) -> (byte lazy_list -> byte -> byte
+      lazy_list -> __ -> string -> __ -> 'a1) -> (byte lazy_list -> byte
+      lazy_list -> __ -> 'a1) -> (byte lazy_list -> byte lazy_list -> __ ->
+      __ -> 'a1) -> byte lazy_list -> 'a1 **)
   
   let parse_instruction_rec addr =
     parse_instruction_rect addr
   
   (** val coq_R_parse_instruction_correct :
-      coq_N -> byte lazy_list -> ((instruction * coq_N) * byte lazy_list)
-      option -> coq_R_parse_instruction **)
+      coq_N -> byte lazy_list -> ((instruction * coq_N) * byte lazy_list) res
+      -> coq_R_parse_instruction **)
   
-  let coq_R_parse_instruction_correct x x0 res =
+  let coq_R_parse_instruction_correct x x0 res0 =
     parse_instruction_rect x (fun y _ z _ -> R_parse_instruction_0 y)
       (fun y y0 _ z _ -> R_parse_instruction_1 (y, y0))
       (fun y y0 y1 y2 y3 y4 y5 y6 _ y8 _ y10 _ z _ -> R_parse_instruction_2
       (y, y0, y1, y2, y3, y4, y5, y6, y8, y10))
-      (fun y y0 y1 y2 y3 y4 y5 y6 _ y8 _ _ z _ -> R_parse_instruction_3 (y,
-      y0, y1, y2, y3, y4, y5, y6, y8)) (fun y y0 y1 y2 y3 y4 y5 y6 _ _ z _ ->
-      R_parse_instruction_4 (y, y0, y1, y2, y3, y4, y5, y6))
-      (fun y y0 y1 y2 _ y4 _ y6 _ z _ -> R_parse_instruction_5 (y, y0, y1,
-      y2, y4, y6)) (fun y y0 y1 y2 _ y4 _ _ z _ -> R_parse_instruction_6 (y,
-      y0, y1, y2, y4)) (fun y y0 y1 y2 _ _ z _ -> R_parse_instruction_7 (y,
-      y0, y1, y2)) (fun y y0 y1 y2 _ y4 _ y6 _ z _ -> R_parse_instruction_8
-      (y, y0, y1, y2, y4, y6)) (fun y y0 y1 y2 _ y4 _ _ z _ ->
-      R_parse_instruction_9 (y, y0, y1, y2, y4)) (fun y y0 y1 y2 _ _ z _ ->
-      R_parse_instruction_10 (y, y0, y1, y2)) (fun y y0 y1 y2 y3 y4 _ z _ ->
-      R_parse_instruction_11 (y, y0, y1, y2, y3, y4))
-      (fun y y0 y1 y2 y3 y4 y5 _ y7 _ z _ -> R_parse_instruction_12 (y, y0,
-      y1, y2, y3, y4, y5, y7)) (fun y y0 y1 y2 y3 y4 y5 _ _ z _ ->
-      R_parse_instruction_13 (y, y0, y1, y2, y3, y4, y5))
-      (fun y y0 y1 _ y3 _ z _ -> R_parse_instruction_14 (y, y0, y1, y3))
-      (fun y y0 y1 _ _ z _ -> R_parse_instruction_15 (y, y0, y1))
-      (fun y y0 _ z _ -> R_parse_instruction_16 (y, y0)) (fun y y0 _ _ z _ ->
-      R_parse_instruction_17 (y, y0)) x0 res __
+      (fun y y0 y1 y2 y3 y4 y5 y6 _ y8 _ y10 _ z _ -> R_parse_instruction_3
+      (y, y0, y1, y2, y3, y4, y5, y6, y8, y10))
+      (fun y y0 y1 y2 y3 y4 y5 y6 _ y8 _ z _ -> R_parse_instruction_4 (y, y0,
+      y1, y2, y3, y4, y5, y6, y8)) (fun y y0 y1 y2 _ y4 _ y6 _ z _ ->
+      R_parse_instruction_5 (y, y0, y1, y2, y4, y6))
+      (fun y y0 y1 y2 _ y4 _ y6 _ z _ -> R_parse_instruction_6 (y, y0, y1,
+      y2, y4, y6)) (fun y y0 y1 y2 _ y4 _ z _ -> R_parse_instruction_7 (y,
+      y0, y1, y2, y4)) (fun y y0 y1 y2 _ y4 _ y6 _ z _ ->
+      R_parse_instruction_8 (y, y0, y1, y2, y4, y6))
+      (fun y y0 y1 y2 _ y4 _ y6 _ z _ -> R_parse_instruction_9 (y, y0, y1,
+      y2, y4, y6)) (fun y y0 y1 y2 _ y4 _ z _ -> R_parse_instruction_10 (y,
+      y0, y1, y2, y4)) (fun y y0 y1 y2 y3 y4 _ z _ -> R_parse_instruction_11
+      (y, y0, y1, y2, y3, y4)) (fun y y0 y1 y2 y3 y4 y5 _ y7 _ z _ ->
+      R_parse_instruction_12 (y, y0, y1, y2, y3, y4, y5, y7))
+      (fun y y0 y1 y2 y3 y4 y5 _ y7 _ z _ -> R_parse_instruction_13 (y, y0,
+      y1, y2, y3, y4, y5, y7)) (fun y y0 y1 _ y3 _ z _ ->
+      R_parse_instruction_14 (y, y0, y1, y3)) (fun y y0 y1 _ y3 _ z _ ->
+      R_parse_instruction_15 (y, y0, y1, y3)) (fun y y0 _ z _ ->
+      R_parse_instruction_16 (y, y0)) (fun y y0 _ _ z _ ->
+      R_parse_instruction_17 (y, y0)) x0 res0 __
   
   (** val instr_max_size : coq_N **)
   
@@ -799,7 +1611,7 @@ module Instruction =
 
 module Val = ValidatorCode(Instruction)
 
-(** val validate_program : byte lazy_list -> bool **)
+(** val validate_program : byte lazy_list -> unit res **)
 
 let validate_program =
   Val.validate_program

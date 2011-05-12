@@ -2,6 +2,7 @@ open BinNat
 open BinPos
 open Byte
 open Datatypes
+open DoOption
 open LazyList
 open Memory
 open Semantics

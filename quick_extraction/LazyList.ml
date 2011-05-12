@@ -1,4 +1,7 @@
+open Ascii
 open Datatypes
+open DoOption
+open String0
 
 type 'x coq_lazy = 'x __coq_lazy Lazy.t
 and 'x __coq_lazy =
@@ -54,17 +57,34 @@ let rec ll_safe_drop n ll =
            | Coq_ll_cons (x, l) ->
                let Lazy ll' = Lazy.force l in ll_safe_drop n' ll')
 
-(** val ll_safe_take : nat -> 'a1 lazy_list -> 'a1 lazy_list option **)
+(** val ll_safe_take : nat -> 'a1 lazy_list -> 'a1 lazy_list res **)
 
 let rec ll_safe_take n ll =
   match n with
-    | O -> Some Coq_ll_nil
+    | O -> OK Coq_ll_nil
     | S n' ->
         (match ll with
-           | Coq_ll_nil -> None
+           | Coq_ll_nil -> Err (String ((Ascii (false, false, true, true,
+               false, false, true, false)), (String ((Ascii (true, false,
+               false, true, false, true, true, false)), (String ((Ascii
+               (true, true, false, false, true, true, true, false)), (String
+               ((Ascii (false, false, true, false, true, true, true, false)),
+               (String ((Ascii (false, false, false, false, false, true,
+               false, false)), (String ((Ascii (false, false, true, false,
+               true, true, true, false)), (String ((Ascii (true, true, true,
+               true, false, true, true, false)), (String ((Ascii (true, true,
+               true, true, false, true, true, false)), (String ((Ascii
+               (false, false, false, false, false, true, false, false)),
+               (String ((Ascii (true, true, false, false, true, true, true,
+               false)), (String ((Ascii (false, false, false, true, false,
+               true, true, false)), (String ((Ascii (true, true, true, true,
+               false, true, true, false)), (String ((Ascii (false, true,
+               false, false, true, true, true, false)), (String ((Ascii
+               (false, false, true, false, true, true, true, false)),
+               EmptyString))))))))))))))))))))))))))))
            | Coq_ll_cons (x, l) ->
                let Lazy ll' = Lazy.force l in
                (match ll_safe_take n' ll' with
-                  | Some a -> Some (Coq_ll_cons (x, (lazy (Lazy a))))
-                  | None -> None))
+                  | OK a -> OK (Coq_ll_cons (x, (lazy (Lazy a))))
+                  | Err e -> Err e))
 

@@ -2,6 +2,7 @@ open BinNat
 open BinPos
 open Byte
 open Datatypes
+open DoOption
 open LazyList
 open Nnat
 open Semantics
@@ -23,12 +24,12 @@ module Mem =
              | None -> Coq_ll_nil)
   
   (** val read_instr_from_memory :
-      memory -> coq_N -> (I.instruction * coq_N) option **)
+      memory -> coq_N -> (I.instruction * coq_N) res **)
   
   let read_instr_from_memory mem pc =
     match I.parse_instruction pc
             (build_list_from_memory (nat_of_N I.instr_max_size) pc mem) with
-      | Some a -> let (p, y) = a in Some p
-      | None -> None
+      | OK a -> let (p, y) = a in OK p
+      | Err e -> Err e
  end
 

@@ -1,13 +1,16 @@
+open Ascii
 open BinNat
 open BinPos
 open BinaryDefs
 open Byte
 open Datatypes
+open DoOption
 open LazyList
 open Lib
 open NSet
 open Semantics
 open SemanticsProg
+open String0
 
 type __ = Obj.t
 let __ = let rec f _ = Obj.repr f in Obj.repr f
@@ -27,38 +30,38 @@ module ValidatorCode =
   
   (** val validate_n_byte_F :
       (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
-      ((coq_NSet * coq_NSet) * byte lazy_list) option) -> coq_N -> coq_N ->
+      ((coq_NSet * coq_NSet) * byte lazy_list) res) -> coq_N -> coq_N ->
       coq_NSet -> coq_NSet -> byte lazy_list -> ((coq_NSet * coq_NSet) * byte
-      lazy_list) option **)
+      lazy_list) res **)
   
   let validate_n_byte_F validate_n_byte0 n addr valid_addresses to_be_checked_addresses ll =
     match n with
-      | N0 -> Some ((valid_addresses, to_be_checked_addresses), ll)
+      | N0 -> OK ((valid_addresses, to_be_checked_addresses), ll)
       | Npos p ->
           (match I.parse_instruction addr ll with
-             | Some a ->
+             | OK a ->
                  let (p0, ll') = a in
                  let (instr, size_instr) = p0 in
                  (match safe_minus n size_instr with
-                    | Some a0 ->
+                    | Some n' ->
                         (match I.classify_instruction instr with
                            | OK_instr ->
-                               validate_n_byte0 a0
+                               validate_n_byte0 n'
                                  (coq_Nplus addr size_instr)
                                  (coq_Nadd addr valid_addresses)
                                  to_be_checked_addresses ll'
                            | Mask_instr (reg1, w) ->
                                if word_eq_dec w proper_mask
-                               then (match a0 with
-                                       | N0 -> Some
+                               then (match n' with
+                                       | N0 -> OK
                                            (((coq_Nadd addr valid_addresses),
                                            to_be_checked_addresses), ll')
                                        | Npos p1 ->
                                            (match I.parse_instruction
                                                   (coq_Nplus addr size_instr)
                                                   ll' with
-                                              | Some a1 ->
-                                                  let (p2, ll'') = a1 in
+                                              | OK a0 ->
+                                                  let (p2, ll'') = a0 in
                                                   let (
                                                   instr', size_instr') = p2
                                                   in
@@ -72,10 +75,10 @@ module ValidatorCode =
                                                   I.register_eq_dec reg1 reg2
                                                   then 
                                                   (match 
-                                                  safe_minus a0 size_instr' with
+                                                  safe_minus n' size_instr' with
                                                     | 
-                                                  Some a2 ->
-                                                  validate_n_byte0 a2
+                                                  Some n'' ->
+                                                  validate_n_byte0 n''
                                                   (coq_Nplus
                                                   (coq_Nplus addr size_instr)
                                                   size_instr')
@@ -84,41 +87,407 @@ module ValidatorCode =
                                                   to_be_checked_addresses
                                                   ll''
                                                     | 
-                                                  None -> None)
-                                                  else None
+                                                  None -> Err (String ((Ascii
+                                                  (true, false, false, true,
+                                                  false, false, true,
+                                                  false)), (String ((Ascii
+                                                  (false, true, true, true,
+                                                  false, true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, false, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, false, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, true,
+                                                  true, true, false)),
+                                                  EmptyString)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+                                                  else 
+                                                  Err (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  false, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  EmptyString))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
                                                     | 
                                                   _ ->
-                                                  validate_n_byte0 a0
+                                                  validate_n_byte0 n'
                                                   (coq_Nplus addr size_instr)
                                                   (coq_Nadd addr
                                                   valid_addresses)
                                                   to_be_checked_addresses ll')
-                                              | None -> None))
-                               else validate_n_byte0 a0
+                                              | Err e -> Err e))
+                               else validate_n_byte0 n'
                                       (coq_Nplus addr size_instr)
                                       (coq_Nadd addr valid_addresses)
                                       to_be_checked_addresses ll'
                            | Direct_jump w ->
                                if dividable_by_32_dec (coq_N_of_word w)
-                               then validate_n_byte0 a0
+                               then validate_n_byte0 n'
                                       (coq_Nplus addr size_instr)
                                       (coq_Nadd addr valid_addresses)
                                       to_be_checked_addresses ll'
                                else if is_Nin (coq_N_of_word w)
                                          valid_addresses
-                                    then validate_n_byte0 a0
+                                    then validate_n_byte0 n'
                                            (coq_Nplus addr size_instr)
                                            (coq_Nadd addr valid_addresses)
                                            to_be_checked_addresses ll'
-                                    else validate_n_byte0 a0
+                                    else validate_n_byte0 n'
                                            (coq_Nplus addr size_instr)
                                            (coq_Nadd addr valid_addresses)
                                            (coq_Nadd 
                                              (coq_N_of_word w)
                                              to_be_checked_addresses) ll'
-                           | _ -> None)
-                    | None -> None)
-             | None -> None)
+                           | Indirect_jump r -> Err (String ((Ascii (false,
+                               true, true, true, false, false, true, false)),
+                               (String ((Ascii (true, true, true, true,
+                               false, true, true, false)), (String ((Ascii
+                               (false, false, true, false, true, true, true,
+                               false)), (String ((Ascii (false, false, false,
+                               false, false, true, false, false)), (String
+                               ((Ascii (true, false, true, true, false, true,
+                               true, false)), (String ((Ascii (true, false,
+                               false, false, false, true, true, false)),
+                               (String ((Ascii (true, true, false, false,
+                               true, true, true, false)), (String ((Ascii
+                               (true, true, false, true, false, true, true,
+                               false)), (String ((Ascii (true, false, true,
+                               false, false, true, true, false)), (String
+                               ((Ascii (false, false, true, false, false,
+                               true, true, false)), (String ((Ascii (false,
+                               false, false, false, false, true, false,
+                               false)), (String ((Ascii (true, false, false,
+                               true, false, true, true, false)), (String
+                               ((Ascii (false, true, true, true, false, true,
+                               true, false)), (String ((Ascii (false, false,
+                               true, false, false, true, true, false)),
+                               (String ((Ascii (true, false, false, true,
+                               false, true, true, false)), (String ((Ascii
+                               (false, true, false, false, true, true, true,
+                               false)), (String ((Ascii (true, false, true,
+                               false, false, true, true, false)), (String
+                               ((Ascii (true, true, false, false, false,
+                               true, true, false)), (String ((Ascii (false,
+                               false, true, false, true, true, true, false)),
+                               (String ((Ascii (false, false, false, false,
+                               false, true, false, false)), (String ((Ascii
+                               (false, true, false, true, false, true, true,
+                               false)), (String ((Ascii (true, false, true,
+                               false, true, true, true, false)), (String
+                               ((Ascii (true, false, true, true, false, true,
+                               true, false)), (String ((Ascii (false, false,
+                               false, false, true, true, true, false)),
+                               EmptyString))))))))))))))))))))))))))))))))))))))))))))))))
+                           | Invalid_instruction -> Err (String ((Ascii
+                               (true, false, false, true, false, false, true,
+                               false)), (String ((Ascii (false, true, true,
+                               true, false, true, true, false)), (String
+                               ((Ascii (false, true, true, false, true, true,
+                               true, false)), (String ((Ascii (true, false,
+                               false, false, false, true, true, false)),
+                               (String ((Ascii (false, false, true, true,
+                               false, true, true, false)), (String ((Ascii
+                               (true, false, false, true, false, true, true,
+                               false)), (String ((Ascii (false, false, true,
+                               false, false, true, true, false)), (String
+                               ((Ascii (false, false, false, false, false,
+                               true, false, false)), (String ((Ascii (true,
+                               false, false, true, false, true, true,
+                               false)), (String ((Ascii (false, true, true,
+                               true, false, true, true, false)), (String
+                               ((Ascii (true, true, false, false, true, true,
+                               true, false)), (String ((Ascii (false, false,
+                               true, false, true, true, true, false)),
+                               (String ((Ascii (false, true, false, false,
+                               true, true, true, false)), (String ((Ascii
+                               (true, false, true, false, true, true, true,
+                               false)), (String ((Ascii (true, true, false,
+                               false, false, true, true, false)), (String
+                               ((Ascii (false, false, true, false, true,
+                               true, true, false)), (String ((Ascii (true,
+                               false, false, true, false, true, true,
+                               false)), (String ((Ascii (true, true, true,
+                               true, false, true, true, false)), (String
+                               ((Ascii (false, true, true, true, false, true,
+                               true, false)),
+                               EmptyString)))))))))))))))))))))))))))))))))))))))
+                    | None -> Err (String ((Ascii (true, false, false, true,
+                        false, false, true, false)), (String ((Ascii (false,
+                        true, true, true, false, true, true, false)), (String
+                        ((Ascii (true, true, false, false, true, true, true,
+                        false)), (String ((Ascii (false, false, true, false,
+                        true, true, true, false)), (String ((Ascii (false,
+                        true, false, false, true, true, true, false)),
+                        (String ((Ascii (true, false, true, false, true,
+                        true, true, false)), (String ((Ascii (true, true,
+                        false, false, false, true, true, false)), (String
+                        ((Ascii (false, false, true, false, true, true, true,
+                        false)), (String ((Ascii (true, false, false, true,
+                        false, true, true, false)), (String ((Ascii (true,
+                        true, true, true, false, true, true, false)), (String
+                        ((Ascii (false, true, true, true, false, true, true,
+                        false)), (String ((Ascii (false, false, false, false,
+                        false, true, false, false)), (String ((Ascii (true,
+                        true, true, true, false, true, true, false)), (String
+                        ((Ascii (false, true, true, false, true, true, true,
+                        false)), (String ((Ascii (true, false, true, false,
+                        false, true, true, false)), (String ((Ascii (false,
+                        true, false, false, true, true, true, false)),
+                        (String ((Ascii (false, false, true, true, false,
+                        true, true, false)), (String ((Ascii (true, false,
+                        false, false, false, true, true, false)), (String
+                        ((Ascii (false, false, false, false, true, true,
+                        true, false)), (String ((Ascii (true, true, false,
+                        false, true, true, true, false)), (String ((Ascii
+                        (false, false, false, false, false, true, false,
+                        false)), (String ((Ascii (true, true, false, false,
+                        true, true, false, false)), (String ((Ascii (false,
+                        true, false, false, true, true, false, false)),
+                        (String ((Ascii (false, false, false, false, false,
+                        true, false, false)), (String ((Ascii (false, true,
+                        false, false, false, true, true, false)), (String
+                        ((Ascii (true, false, false, true, true, true, true,
+                        false)), (String ((Ascii (false, false, true, false,
+                        true, true, true, false)), (String ((Ascii (true,
+                        false, true, false, false, true, true, false)),
+                        (String ((Ascii (true, true, false, false, true,
+                        true, true, false)), (String ((Ascii (false, false,
+                        false, false, false, true, false, false)), (String
+                        ((Ascii (false, true, false, false, false, true,
+                        true, false)), (String ((Ascii (true, true, true,
+                        true, false, true, true, false)), (String ((Ascii
+                        (true, false, true, false, true, true, true, false)),
+                        (String ((Ascii (false, true, true, true, false,
+                        true, true, false)), (String ((Ascii (false, false,
+                        true, false, false, true, true, false)), (String
+                        ((Ascii (true, false, false, false, false, true,
+                        true, false)), (String ((Ascii (false, true, false,
+                        false, true, true, true, false)), (String ((Ascii
+                        (true, false, false, true, true, true, true, false)),
+                        EmptyString)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+             | Err e -> Err e)
   
   (** val eq_rew_r_dep : 'a1 -> 'a1 -> 'a2 -> 'a2 **)
   
@@ -127,31 +496,31 @@ module ValidatorCode =
   
   (** val validate_n_byte_terminate :
       coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
-      ((coq_NSet * coq_NSet) * byte lazy_list) option **)
+      ((coq_NSet * coq_NSet) * byte lazy_list) res **)
   
   let rec validate_n_byte_terminate n addr valid_addresses to_be_checked_addresses ll =
     match n with
-      | N0 -> Some ((valid_addresses, to_be_checked_addresses), ll)
+      | N0 -> OK ((valid_addresses, to_be_checked_addresses), ll)
       | Npos p ->
           (match I.parse_instruction addr ll with
-             | Some a ->
+             | OK a ->
                  let (p0, ll') = a in
                  let (instr, size_instr) = p0 in
                  (match safe_minus (Npos p) size_instr with
-                    | Some a0 ->
+                    | Some n' ->
                         (match I.classify_instruction instr with
                            | OK_instr ->
                                Obj.magic
                                  (fun n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _ ->
                                  validate_n_byte_terminate n0 addr0
                                    valid_addresses0 to_be_checked_addresses0
-                                   ll0) a0 (coq_Nplus addr size_instr)
+                                   ll0) n' (coq_Nplus addr size_instr)
                                  (coq_Nadd addr valid_addresses)
                                  to_be_checked_addresses ll' __
                            | Mask_instr (reg1, w) ->
                                if word_eq_dec w proper_mask
-                               then (match a0 with
-                                       | N0 -> Some
+                               then (match n' with
+                                       | N0 -> OK
                                            (((coq_Nadd addr valid_addresses),
                                            (Obj.magic
                                              to_be_checked_addresses)), ll')
@@ -159,8 +528,8 @@ module ValidatorCode =
                                            (match I.parse_instruction
                                                   (coq_Nplus addr size_instr)
                                                   ll' with
-                                              | Some a1 ->
-                                                  let (p2, ll'') = a1 in
+                                              | OK a0 ->
+                                                  let (p2, ll'') = a0 in
                                                   let (
                                                   instr', size_instr') = p2
                                                   in
@@ -177,13 +546,13 @@ module ValidatorCode =
                                                   safe_minus (Npos p1)
                                                   size_instr' with
                                                     | 
-                                                  Some a2 ->
+                                                  Some n'' ->
                                                   Obj.magic
                                                   (fun n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _ ->
                                                   validate_n_byte_terminate
                                                   n0 addr0 valid_addresses0
                                                   to_be_checked_addresses0
-                                                  ll0) a2
+                                                  ll0) n''
                                                   (coq_Nplus
                                                   (coq_Nplus addr size_instr)
                                                   size_instr')
@@ -192,8 +561,249 @@ module ValidatorCode =
                                                   to_be_checked_addresses
                                                   ll'' __
                                                     | 
-                                                  None -> None)
-                                                  else None
+                                                  None -> Err (String ((Ascii
+                                                  (true, false, false, true,
+                                                  false, false, true,
+                                                  false)), (String ((Ascii
+                                                  (false, true, true, true,
+                                                  false, true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, false, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, false, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, true,
+                                                  true, true, false)),
+                                                  EmptyString)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+                                                  else 
+                                                  Err (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  false, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, false, false, false,
+                                                  true, false, false)),
+                                                  (String ((Ascii (true,
+                                                  false, false, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, true, true, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  true, false, false, true,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  false, true, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (true,
+                                                  true, false, false, false,
+                                                  true, true, false)),
+                                                  (String ((Ascii (false,
+                                                  false, true, false, true,
+                                                  true, true, false)),
+                                                  EmptyString))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
                                                     | 
                                                   _ ->
                                                   Obj.magic
@@ -207,12 +817,12 @@ module ValidatorCode =
                                                   valid_addresses)
                                                   to_be_checked_addresses ll'
                                                   __)
-                                              | None -> None))
+                                              | Err e0 -> Err e0))
                                else Obj.magic
                                       (fun n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _ ->
                                       validate_n_byte_terminate n0 addr0
                                         valid_addresses0
-                                        to_be_checked_addresses0 ll0) a0
+                                        to_be_checked_addresses0 ll0) n'
                                       (coq_Nplus addr size_instr)
                                       (coq_Nadd addr valid_addresses)
                                       to_be_checked_addresses ll' __
@@ -222,7 +832,7 @@ module ValidatorCode =
                                       (fun n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _ ->
                                       validate_n_byte_terminate n0 addr0
                                         valid_addresses0
-                                        to_be_checked_addresses0 ll0) a0
+                                        to_be_checked_addresses0 ll0) n'
                                       (coq_Nplus addr size_instr)
                                       (coq_Nadd addr valid_addresses)
                                       to_be_checked_addresses ll' __
@@ -232,23 +842,148 @@ module ValidatorCode =
                                            (fun n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _ ->
                                            validate_n_byte_terminate n0 addr0
                                              valid_addresses0
-                                             to_be_checked_addresses0 ll0) a0
+                                             to_be_checked_addresses0 ll0) n'
                                            (coq_Nplus addr size_instr)
                                            (coq_Nadd addr valid_addresses)
                                            to_be_checked_addresses ll' __
-                                    else validate_n_byte_terminate a0
+                                    else validate_n_byte_terminate n'
                                            (coq_Nplus addr size_instr)
                                            (coq_Nadd addr valid_addresses)
                                            (coq_Nadd 
                                              (coq_N_of_word w)
                                              to_be_checked_addresses) ll'
-                           | _ -> None)
-                    | None -> None)
-             | None -> None)
+                           | Indirect_jump r -> Err (String ((Ascii (false,
+                               true, true, true, false, false, true, false)),
+                               (String ((Ascii (true, true, true, true,
+                               false, true, true, false)), (String ((Ascii
+                               (false, false, true, false, true, true, true,
+                               false)), (String ((Ascii (false, false, false,
+                               false, false, true, false, false)), (String
+                               ((Ascii (true, false, true, true, false, true,
+                               true, false)), (String ((Ascii (true, false,
+                               false, false, false, true, true, false)),
+                               (String ((Ascii (true, true, false, false,
+                               true, true, true, false)), (String ((Ascii
+                               (true, true, false, true, false, true, true,
+                               false)), (String ((Ascii (true, false, true,
+                               false, false, true, true, false)), (String
+                               ((Ascii (false, false, true, false, false,
+                               true, true, false)), (String ((Ascii (false,
+                               false, false, false, false, true, false,
+                               false)), (String ((Ascii (true, false, false,
+                               true, false, true, true, false)), (String
+                               ((Ascii (false, true, true, true, false, true,
+                               true, false)), (String ((Ascii (false, false,
+                               true, false, false, true, true, false)),
+                               (String ((Ascii (true, false, false, true,
+                               false, true, true, false)), (String ((Ascii
+                               (false, true, false, false, true, true, true,
+                               false)), (String ((Ascii (true, false, true,
+                               false, false, true, true, false)), (String
+                               ((Ascii (true, true, false, false, false,
+                               true, true, false)), (String ((Ascii (false,
+                               false, true, false, true, true, true, false)),
+                               (String ((Ascii (false, false, false, false,
+                               false, true, false, false)), (String ((Ascii
+                               (false, true, false, true, false, true, true,
+                               false)), (String ((Ascii (true, false, true,
+                               false, true, true, true, false)), (String
+                               ((Ascii (true, false, true, true, false, true,
+                               true, false)), (String ((Ascii (false, false,
+                               false, false, true, true, true, false)),
+                               EmptyString))))))))))))))))))))))))))))))))))))))))))))))))
+                           | Invalid_instruction -> Err (String ((Ascii
+                               (true, false, false, true, false, false, true,
+                               false)), (String ((Ascii (false, true, true,
+                               true, false, true, true, false)), (String
+                               ((Ascii (false, true, true, false, true, true,
+                               true, false)), (String ((Ascii (true, false,
+                               false, false, false, true, true, false)),
+                               (String ((Ascii (false, false, true, true,
+                               false, true, true, false)), (String ((Ascii
+                               (true, false, false, true, false, true, true,
+                               false)), (String ((Ascii (false, false, true,
+                               false, false, true, true, false)), (String
+                               ((Ascii (false, false, false, false, false,
+                               true, false, false)), (String ((Ascii (true,
+                               false, false, true, false, true, true,
+                               false)), (String ((Ascii (false, true, true,
+                               true, false, true, true, false)), (String
+                               ((Ascii (true, true, false, false, true, true,
+                               true, false)), (String ((Ascii (false, false,
+                               true, false, true, true, true, false)),
+                               (String ((Ascii (false, true, false, false,
+                               true, true, true, false)), (String ((Ascii
+                               (true, false, true, false, true, true, true,
+                               false)), (String ((Ascii (true, true, false,
+                               false, false, true, true, false)), (String
+                               ((Ascii (false, false, true, false, true,
+                               true, true, false)), (String ((Ascii (true,
+                               false, false, true, false, true, true,
+                               false)), (String ((Ascii (true, true, true,
+                               true, false, true, true, false)), (String
+                               ((Ascii (false, true, true, true, false, true,
+                               true, false)),
+                               EmptyString)))))))))))))))))))))))))))))))))))))))
+                    | None -> Err (String ((Ascii (true, false, false, true,
+                        false, false, true, false)), (String ((Ascii (false,
+                        true, true, true, false, true, true, false)), (String
+                        ((Ascii (true, true, false, false, true, true, true,
+                        false)), (String ((Ascii (false, false, true, false,
+                        true, true, true, false)), (String ((Ascii (false,
+                        true, false, false, true, true, true, false)),
+                        (String ((Ascii (true, false, true, false, true,
+                        true, true, false)), (String ((Ascii (true, true,
+                        false, false, false, true, true, false)), (String
+                        ((Ascii (false, false, true, false, true, true, true,
+                        false)), (String ((Ascii (true, false, false, true,
+                        false, true, true, false)), (String ((Ascii (true,
+                        true, true, true, false, true, true, false)), (String
+                        ((Ascii (false, true, true, true, false, true, true,
+                        false)), (String ((Ascii (false, false, false, false,
+                        false, true, false, false)), (String ((Ascii (true,
+                        true, true, true, false, true, true, false)), (String
+                        ((Ascii (false, true, true, false, true, true, true,
+                        false)), (String ((Ascii (true, false, true, false,
+                        false, true, true, false)), (String ((Ascii (false,
+                        true, false, false, true, true, true, false)),
+                        (String ((Ascii (false, false, true, true, false,
+                        true, true, false)), (String ((Ascii (true, false,
+                        false, false, false, true, true, false)), (String
+                        ((Ascii (false, false, false, false, true, true,
+                        true, false)), (String ((Ascii (true, true, false,
+                        false, true, true, true, false)), (String ((Ascii
+                        (false, false, false, false, false, true, false,
+                        false)), (String ((Ascii (true, true, false, false,
+                        true, true, false, false)), (String ((Ascii (false,
+                        true, false, false, true, true, false, false)),
+                        (String ((Ascii (false, false, false, false, false,
+                        true, false, false)), (String ((Ascii (false, true,
+                        false, false, false, true, true, false)), (String
+                        ((Ascii (true, false, false, true, true, true, true,
+                        false)), (String ((Ascii (false, false, true, false,
+                        true, true, true, false)), (String ((Ascii (true,
+                        false, true, false, false, true, true, false)),
+                        (String ((Ascii (true, true, false, false, true,
+                        true, true, false)), (String ((Ascii (false, false,
+                        false, false, false, true, false, false)), (String
+                        ((Ascii (false, true, false, false, false, true,
+                        true, false)), (String ((Ascii (true, true, true,
+                        true, false, true, true, false)), (String ((Ascii
+                        (true, false, true, false, true, true, true, false)),
+                        (String ((Ascii (false, true, true, true, false,
+                        true, true, false)), (String ((Ascii (false, false,
+                        true, false, false, true, true, false)), (String
+                        ((Ascii (true, false, false, false, false, true,
+                        true, false)), (String ((Ascii (false, true, false,
+                        false, true, true, true, false)), (String ((Ascii
+                        (true, false, false, true, true, true, true, false)),
+                        EmptyString)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+             | Err e -> Err e)
   
   (** val validate_n_byte :
       coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
-      ((coq_NSet * coq_NSet) * byte lazy_list) option **)
+      ((coq_NSet * coq_NSet) * byte lazy_list) res **)
   
   let validate_n_byte x x0 x1 x2 x3 =
     validate_n_byte_terminate x x0 x1 x2 x3
@@ -259,22 +994,18 @@ module ValidatorCode =
     | R_validate_n_byte_1 of coq_N * coq_N * coq_NSet * 
        coq_NSet * byte lazy_list * coq_N
        * ((I.instruction * coq_N) * byte lazy_list) * 
-       I.instruction * coq_N * byte lazy_list * coq_N
-       * ((coq_NSet * coq_NSet) * byte lazy_list) option
-       * coq_R_validate_n_byte
+       I.instruction * coq_N * byte lazy_list
     | R_validate_n_byte_2 of coq_N * coq_N * coq_NSet * 
        coq_NSet * byte lazy_list * coq_N
        * ((I.instruction * coq_N) * byte lazy_list) * 
-       I.instruction * coq_N * byte lazy_list * coq_N * 
-       I.register * word
+       I.instruction * coq_N * byte lazy_list * coq_N
+       * ((coq_NSet * coq_NSet) * byte lazy_list) res * 
+       coq_R_validate_n_byte
     | R_validate_n_byte_3 of coq_N * coq_N * coq_NSet * 
        coq_NSet * byte lazy_list * coq_N
        * ((I.instruction * coq_N) * byte lazy_list) * 
        I.instruction * coq_N * byte lazy_list * coq_N * 
-       I.register * word * coq_N * ((I.instruction * coq_N) * byte lazy_list)
-       * I.instruction * coq_N * byte lazy_list * I.register * 
-       coq_N * ((coq_NSet * coq_NSet) * byte lazy_list) option
-       * coq_R_validate_n_byte
+       I.register * word
     | R_validate_n_byte_4 of coq_N * coq_N * coq_NSet * 
        coq_NSet * byte lazy_list * coq_N
        * ((I.instruction * coq_N) * byte lazy_list) * 
@@ -286,447 +1017,75 @@ module ValidatorCode =
        * ((I.instruction * coq_N) * byte lazy_list) * 
        I.instruction * coq_N * byte lazy_list * coq_N * 
        I.register * word * coq_N * ((I.instruction * coq_N) * byte lazy_list)
-       * I.instruction * coq_N * byte lazy_list * I.register
+       * I.instruction * coq_N * byte lazy_list * I.register * 
+       coq_N * ((coq_NSet * coq_NSet) * byte lazy_list) res
+       * coq_R_validate_n_byte
     | R_validate_n_byte_6 of coq_N * coq_N * coq_NSet * 
+       coq_NSet * byte lazy_list * coq_N
+       * ((I.instruction * coq_N) * byte lazy_list) * 
+       I.instruction * coq_N * byte lazy_list * coq_N * 
+       I.register * word * coq_N * ((I.instruction * coq_N) * byte lazy_list)
+       * I.instruction * coq_N * byte lazy_list * I.register
+    | R_validate_n_byte_7 of coq_N * coq_N * coq_NSet * 
        coq_NSet * byte lazy_list * coq_N
        * ((I.instruction * coq_N) * byte lazy_list) * 
        I.instruction * coq_N * byte lazy_list * coq_N * 
        I.register * word * coq_N * ((I.instruction * coq_N) * byte lazy_list)
        * I.instruction * coq_N * byte lazy_list
        * I.register instruction_classification
-       * ((coq_NSet * coq_NSet) * byte lazy_list) option
-       * coq_R_validate_n_byte
-    | R_validate_n_byte_7 of coq_N * coq_N * coq_NSet * 
-       coq_NSet * byte lazy_list * coq_N
-       * ((I.instruction * coq_N) * byte lazy_list) * 
-       I.instruction * coq_N * byte lazy_list * coq_N * 
-       I.register * word * coq_N
+       * ((coq_NSet * coq_NSet) * byte lazy_list) res * 
+       coq_R_validate_n_byte
     | R_validate_n_byte_8 of coq_N * coq_N * coq_NSet * 
        coq_NSet * byte lazy_list * coq_N
        * ((I.instruction * coq_N) * byte lazy_list) * 
        I.instruction * coq_N * byte lazy_list * coq_N * 
-       I.register * word * ((coq_NSet * coq_NSet) * byte lazy_list) option
-       * coq_R_validate_n_byte
+       I.register * word * coq_N * string
     | R_validate_n_byte_9 of coq_N * coq_N * coq_NSet * 
        coq_NSet * byte lazy_list * coq_N
        * ((I.instruction * coq_N) * byte lazy_list) * 
        I.instruction * coq_N * byte lazy_list * coq_N * 
-       word * ((coq_NSet * coq_NSet) * byte lazy_list) option
+       I.register * word * ((coq_NSet * coq_NSet) * byte lazy_list) res
        * coq_R_validate_n_byte
     | R_validate_n_byte_10 of coq_N * coq_N * coq_NSet * 
        coq_NSet * byte lazy_list * coq_N
        * ((I.instruction * coq_N) * byte lazy_list) * 
        I.instruction * coq_N * byte lazy_list * coq_N * 
-       word * ((coq_NSet * coq_NSet) * byte lazy_list) option
+       word * ((coq_NSet * coq_NSet) * byte lazy_list) res
        * coq_R_validate_n_byte
     | R_validate_n_byte_11 of coq_N * coq_N * coq_NSet * 
        coq_NSet * byte lazy_list * coq_N
        * ((I.instruction * coq_N) * byte lazy_list) * 
        I.instruction * coq_N * byte lazy_list * coq_N * 
-       word * ((coq_NSet * coq_NSet) * byte lazy_list) option
+       word * ((coq_NSet * coq_NSet) * byte lazy_list) res
        * coq_R_validate_n_byte
     | R_validate_n_byte_12 of coq_N * coq_N * coq_NSet * 
        coq_NSet * byte lazy_list * coq_N
        * ((I.instruction * coq_N) * byte lazy_list) * 
-       I.instruction * coq_N * byte lazy_list * coq_N
+       I.instruction * coq_N * byte lazy_list * coq_N * 
+       word * ((coq_NSet * coq_NSet) * byte lazy_list) res
+       * coq_R_validate_n_byte
     | R_validate_n_byte_13 of coq_N * coq_N * coq_NSet * 
+       coq_NSet * byte lazy_list * coq_N
+       * ((I.instruction * coq_N) * byte lazy_list) * 
+       I.instruction * coq_N * byte lazy_list * coq_N
+    | R_validate_n_byte_14 of coq_N * coq_N * coq_NSet * 
        coq_NSet * byte lazy_list * coq_N
        * ((I.instruction * coq_N) * byte lazy_list) * 
        I.instruction * coq_N * byte lazy_list * coq_N * 
        I.register
-    | R_validate_n_byte_14 of coq_N * coq_N * coq_NSet * 
-       coq_NSet * byte lazy_list * coq_N
-       * ((I.instruction * coq_N) * byte lazy_list) * 
-       I.instruction * coq_N * byte lazy_list
     | R_validate_n_byte_15 of coq_N * coq_N * coq_NSet * 
-       coq_NSet * byte lazy_list * coq_N
+       coq_NSet * byte lazy_list * coq_N * string
   
   (** val coq_R_validate_n_byte_rect :
       (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> __ -> 'a1)
       -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N
       -> __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __ ->
-      I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ -> __ ->
-      ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet
-      -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
-      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
-      I.register -> __ -> __ -> __ -> coq_N -> __ ->
-      ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
-      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
-      I.register -> __ -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N ->
-      coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
-      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
-      I.register -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
-      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
-      I.register instruction_classification -> __ -> __ ->
-      ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> coq_N -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N ->
-      coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> word -> __ -> __ -> __
-      -> ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> word -> __ -> __ -> __
-      -> __ -> ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> word -> __ -> __ -> __
-      -> __ -> ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> __ -> 'a1) -> (coq_N ->
-      coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> __ ->
-      'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
-      coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __
-      -> I.instruction -> coq_N -> byte lazy_list -> __ -> __ -> 'a1) ->
-      (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N ->
-      __ -> __ -> __ -> 'a1) -> coq_N -> coq_N -> coq_NSet -> coq_NSet ->
-      byte lazy_list -> ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 **)
-  
-  let rec coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 f13 f14 n addr valid_addresses to_be_checked_addresses ll o = function
-    | R_validate_n_byte_0
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0) ->
-        f n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 __
-    | R_validate_n_byte_1
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4) ->
-        let addr' = coq_Nplus addr0 x0 in
-        f0 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ __ x3 x4
-          (coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
-            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
-            to_be_checked_addresses0 x1 x3 x4)
-    | R_validate_n_byte_2
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4) ->
-        f1 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 x4 __ __ __ __
-    | R_validate_n_byte_3
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13) ->
-        let addr' = coq_Nplus addr0 x0 in
-        let addr'' = coq_Nplus addr' x8 in
-        f2 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
-          __ __ __ x11 __ x12 x13
-          (coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
-            f12 f13 f14 x11 addr'' (coq_Nadd addr0 valid_addresses0)
-            to_be_checked_addresses0 x9 x12 x13)
-    | R_validate_n_byte_4
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10) ->
-        f3 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
-          __ __ __ __
-    | R_validate_n_byte_5
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10) ->
-        f4 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
-          __ __ __
-    | R_validate_n_byte_6
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12) ->
-        let addr' = coq_Nplus addr0 x0 in
-        f5 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
-          __ __ x11 x12
-          (coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
-            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
-            to_be_checked_addresses0 x1 x11 x12)
-    | R_validate_n_byte_7
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5) ->
-        f6 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ __
-    | R_validate_n_byte_8
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5, x6) ->
-        let addr' = coq_Nplus addr0 x0 in
-        f7 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 x6
-          (coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
-            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
-            to_be_checked_addresses0 x1 x5 x6)
-    | R_validate_n_byte_9
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5) ->
-        let addr' = coq_Nplus addr0 x0 in
-        f8 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 __ __ __ x4 x5
-          (coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
-            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
-            to_be_checked_addresses0 x1 x4 x5)
-    | R_validate_n_byte_10
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5) ->
-        let addr' = coq_Nplus addr0 x0 in
-        f9 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 __ __ __ __ x4 x5
-          (coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
-            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
-            to_be_checked_addresses0 x1 x4 x5)
-    | R_validate_n_byte_11
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5) ->
-        let addr' = coq_Nplus addr0 x0 in
-        let dest_addr = coq_N_of_word x3 in
-        f10 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 __ __ __ __ x4 x5
-          (coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
-            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
-            (coq_Nadd dest_addr to_be_checked_addresses0) x1 x4 x5)
-    | R_validate_n_byte_12
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2) ->
-        f11 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ __
-    | R_validate_n_byte_13
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3) ->
-        f12 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 __
-    | R_validate_n_byte_14
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1) ->
-        f13 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ __
-    | R_validate_n_byte_15
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x) ->
-        f14 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __
-          __
-  
-  (** val coq_R_validate_n_byte_rec :
-      (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> __ -> 'a1)
-      -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N
-      -> __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __ ->
-      I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ -> __ ->
-      ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet
-      -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
-      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
-      I.register -> __ -> __ -> __ -> coq_N -> __ ->
-      ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
-      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
-      I.register -> __ -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N ->
-      coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
-      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
-      I.register -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
-      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
-      I.register instruction_classification -> __ -> __ ->
-      ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> coq_N -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N ->
-      coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> word -> __ -> __ -> __
-      -> ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> word -> __ -> __ -> __
-      -> __ -> ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> word -> __ -> __ -> __
-      -> __ -> ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
-      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> __ -> 'a1) -> (coq_N ->
-      coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> __ ->
-      'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
-      coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __
-      -> I.instruction -> coq_N -> byte lazy_list -> __ -> __ -> 'a1) ->
-      (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N ->
-      __ -> __ -> __ -> 'a1) -> coq_N -> coq_N -> coq_NSet -> coq_NSet ->
-      byte lazy_list -> ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte -> 'a1 **)
-  
-  let rec coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 f13 f14 n addr valid_addresses to_be_checked_addresses ll o = function
-    | R_validate_n_byte_0
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0) ->
-        f n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 __
-    | R_validate_n_byte_1
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4) ->
-        let addr' = coq_Nplus addr0 x0 in
-        f0 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ __ x3 x4
-          (coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
-            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
-            to_be_checked_addresses0 x1 x3 x4)
-    | R_validate_n_byte_2
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4) ->
-        f1 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 x4 __ __ __ __
-    | R_validate_n_byte_3
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13) ->
-        let addr' = coq_Nplus addr0 x0 in
-        let addr'' = coq_Nplus addr' x8 in
-        f2 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
-          __ __ __ x11 __ x12 x13
-          (coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
-            f12 f13 f14 x11 addr'' (coq_Nadd addr0 valid_addresses0)
-            to_be_checked_addresses0 x9 x12 x13)
-    | R_validate_n_byte_4
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10) ->
-        f3 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
-          __ __ __ __
-    | R_validate_n_byte_5
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10) ->
-        f4 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
-          __ __ __
-    | R_validate_n_byte_6
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12) ->
-        let addr' = coq_Nplus addr0 x0 in
-        f5 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
-          __ __ x11 x12
-          (coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
-            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
-            to_be_checked_addresses0 x1 x11 x12)
-    | R_validate_n_byte_7
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5) ->
-        f6 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ __
-    | R_validate_n_byte_8
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5, x6) ->
-        let addr' = coq_Nplus addr0 x0 in
-        f7 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 x6
-          (coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
-            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
-            to_be_checked_addresses0 x1 x5 x6)
-    | R_validate_n_byte_9
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5) ->
-        let addr' = coq_Nplus addr0 x0 in
-        f8 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 __ __ __ x4 x5
-          (coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
-            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
-            to_be_checked_addresses0 x1 x4 x5)
-    | R_validate_n_byte_10
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5) ->
-        let addr' = coq_Nplus addr0 x0 in
-        f9 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 __ __ __ __ x4 x5
-          (coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
-            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
-            to_be_checked_addresses0 x1 x4 x5)
-    | R_validate_n_byte_11
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3, x4, x5) ->
-        let addr' = coq_Nplus addr0 x0 in
-        let dest_addr = coq_N_of_word x3 in
-        f10 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 __ __ __ __ x4 x5
-          (coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
-            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
-            (coq_Nadd dest_addr to_be_checked_addresses0) x1 x4 x5)
-    | R_validate_n_byte_12
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2) ->
-        f11 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ __
-    | R_validate_n_byte_13
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1, x2, x3) ->
-        f12 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ x2 __ x3 __
-    | R_validate_n_byte_14
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
-         x, x0, x1) ->
-        f13 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
-          __ x x0 x1 __ __
-    | R_validate_n_byte_15
-        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x) ->
-        f14 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __
-          __
-  
-  (** val validate_n_byte_rect :
-      (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> __ -> 'a1)
-      -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N
-      -> __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __ ->
-      I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ -> __ ->
-      'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte
+      I.instruction -> coq_N -> byte lazy_list -> __ -> __ -> 'a1) -> (coq_N
+      -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __
+      -> ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> __ ->
+      ((coq_NSet * coq_NSet) * byte lazy_list) res -> coq_R_validate_n_byte
+      -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte
       lazy_list -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
       lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
       coq_N -> __ -> I.register -> word -> __ -> __ -> __ -> __ -> 'a1) ->
@@ -735,35 +1094,411 @@ module ValidatorCode =
       I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ ->
       I.register -> word -> __ -> __ -> __ -> coq_N -> __ -> __ ->
       ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> I.register -> __ -> __ -> __ -> coq_N
-      -> __ -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte
-      lazy_list -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
-      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
-      coq_N -> __ -> I.register -> word -> __ -> __ -> __ -> coq_N -> __ ->
-      __ -> ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction
-      -> coq_N -> byte lazy_list -> __ -> I.register -> __ -> __ -> __ -> __
-      -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
+      coq_N -> byte lazy_list -> __ -> I.register -> __ -> __ -> __ -> __ ->
+      'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
       coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __
       -> I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ ->
       I.register -> word -> __ -> __ -> __ -> coq_N -> __ -> __ ->
       ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> I.register -> __ -> __ -> __ -> 'a1)
-      -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N
-      -> __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __ ->
-      I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ ->
-      I.register -> word -> __ -> __ -> __ -> coq_N -> __ -> __ ->
+      coq_N -> byte lazy_list -> __ -> I.register -> __ -> __ -> __ -> coq_N
+      -> __ -> ((coq_NSet * coq_NSet) * byte lazy_list) res ->
+      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
+      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
       ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> I.register instruction_classification
-      -> __ -> __ -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
+      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
+      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
+      I.register -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
+      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
+      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
+      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
+      I.register instruction_classification -> __ -> __ ->
+      ((coq_NSet * coq_NSet) * byte lazy_list) res -> coq_R_validate_n_byte
+      -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte
+      lazy_list -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
+      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
+      coq_N -> __ -> I.register -> word -> __ -> __ -> __ -> coq_N -> __ ->
+      __ -> string -> __ -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet
       -> byte lazy_list -> coq_N -> __ -> __ ->
       ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
       coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> coq_N -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N ->
+      __ -> __ -> __ -> ((coq_NSet * coq_NSet) * byte lazy_list) res ->
+      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
+      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> word -> __ -> __ -> __
+      -> ((coq_NSet * coq_NSet) * byte lazy_list) res ->
+      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
+      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> word -> __ -> __ -> __
+      -> __ -> ((coq_NSet * coq_NSet) * byte lazy_list) res ->
+      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
+      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> word -> __ -> __ -> __
+      -> __ -> ((coq_NSet * coq_NSet) * byte lazy_list) res ->
+      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
+      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> __ -> 'a1) -> (coq_N ->
+      coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> __ ->
+      'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
+      coq_N -> __ -> __ -> string -> __ -> 'a1) -> coq_N -> coq_N -> coq_NSet
+      -> coq_NSet -> byte lazy_list -> ((coq_NSet * coq_NSet) * byte
+      lazy_list) res -> coq_R_validate_n_byte -> 'a1 **)
+  
+  let rec coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 f13 f14 n addr valid_addresses to_be_checked_addresses ll r = function
+    | R_validate_n_byte_0
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0) ->
+        f n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 __
+    | R_validate_n_byte_1
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1) ->
+        f0 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ __
+    | R_validate_n_byte_2
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4) ->
+        let addr' = coq_Nplus addr0 x0 in
+        f1 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ __ x3 x4
+          (coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
+            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
+            to_be_checked_addresses0 x1 x3 x4)
+    | R_validate_n_byte_3
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4) ->
+        f2 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 x4 __ __ __ __
+    | R_validate_n_byte_4
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10) ->
+        f3 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
+          __ __ __ __
+    | R_validate_n_byte_5
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13) ->
+        let addr' = coq_Nplus addr0 x0 in
+        let addr'' = coq_Nplus addr' x8 in
+        f4 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
+          __ __ __ x11 __ x12 x13
+          (coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
+            f12 f13 f14 x11 addr'' (coq_Nadd addr0 valid_addresses0)
+            to_be_checked_addresses0 x9 x12 x13)
+    | R_validate_n_byte_6
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10) ->
+        f5 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
+          __ __ __
+    | R_validate_n_byte_7
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12) ->
+        let addr' = coq_Nplus addr0 x0 in
+        f6 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
+          __ __ x11 x12
+          (coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
+            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
+            to_be_checked_addresses0 x1 x11 x12)
+    | R_validate_n_byte_8
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5, x6) ->
+        f7 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __
+    | R_validate_n_byte_9
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5, x6) ->
+        let addr' = coq_Nplus addr0 x0 in
+        f8 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 x6
+          (coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
+            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
+            to_be_checked_addresses0 x1 x5 x6)
+    | R_validate_n_byte_10
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5) ->
+        let addr' = coq_Nplus addr0 x0 in
+        f9 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 __ __ __ x4 x5
+          (coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
+            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
+            to_be_checked_addresses0 x1 x4 x5)
+    | R_validate_n_byte_11
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5) ->
+        let addr' = coq_Nplus addr0 x0 in
+        f10 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 __ __ __ __ x4 x5
+          (coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
+            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
+            to_be_checked_addresses0 x1 x4 x5)
+    | R_validate_n_byte_12
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5) ->
+        let addr' = coq_Nplus addr0 x0 in
+        let dest_addr = coq_N_of_word x3 in
+        f11 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 __ __ __ __ x4 x5
+          (coq_R_validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
+            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
+            (coq_Nadd dest_addr to_be_checked_addresses0) x1 x4 x5)
+    | R_validate_n_byte_13
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2) ->
+        f12 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ __
+    | R_validate_n_byte_14
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3) ->
+        f13 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 __
+    | R_validate_n_byte_15
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, e) ->
+        f14 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ e
+          __
+  
+  (** val coq_R_validate_n_byte_rec :
+      (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> __ -> 'a1)
+      -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N
+      -> __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __ ->
+      I.instruction -> coq_N -> byte lazy_list -> __ -> __ -> 'a1) -> (coq_N
+      -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __
+      -> ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> __ ->
+      ((coq_NSet * coq_NSet) * byte lazy_list) res -> coq_R_validate_n_byte
+      -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte
+      lazy_list -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
+      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
+      coq_N -> __ -> I.register -> word -> __ -> __ -> __ -> __ -> 'a1) ->
+      (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N ->
+      __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __ ->
+      I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ ->
+      I.register -> word -> __ -> __ -> __ -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> I.register -> __ -> __ -> __ -> __ ->
+      'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
+      coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __
+      -> I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ ->
+      I.register -> word -> __ -> __ -> __ -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> I.register -> __ -> __ -> __ -> coq_N
+      -> __ -> ((coq_NSet * coq_NSet) * byte lazy_list) res ->
+      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
+      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
+      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
+      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
+      I.register -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
+      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
+      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
+      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
+      I.register instruction_classification -> __ -> __ ->
+      ((coq_NSet * coq_NSet) * byte lazy_list) res -> coq_R_validate_n_byte
+      -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte
+      lazy_list -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
+      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
+      coq_N -> __ -> I.register -> word -> __ -> __ -> __ -> coq_N -> __ ->
+      __ -> string -> __ -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet
+      -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
+      __ -> __ -> __ -> ((coq_NSet * coq_NSet) * byte lazy_list) res ->
+      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
+      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> word -> __ -> __ -> __
+      -> ((coq_NSet * coq_NSet) * byte lazy_list) res ->
+      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
+      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> word -> __ -> __ -> __
+      -> __ -> ((coq_NSet * coq_NSet) * byte lazy_list) res ->
+      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
+      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> word -> __ -> __ -> __
+      -> __ -> ((coq_NSet * coq_NSet) * byte lazy_list) res ->
+      coq_R_validate_n_byte -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
+      coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> __ -> 'a1) -> (coq_N ->
+      coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> __ ->
+      'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
+      coq_N -> __ -> __ -> string -> __ -> 'a1) -> coq_N -> coq_N -> coq_NSet
+      -> coq_NSet -> byte lazy_list -> ((coq_NSet * coq_NSet) * byte
+      lazy_list) res -> coq_R_validate_n_byte -> 'a1 **)
+  
+  let rec coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 f13 f14 n addr valid_addresses to_be_checked_addresses ll r = function
+    | R_validate_n_byte_0
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0) ->
+        f n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 __
+    | R_validate_n_byte_1
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1) ->
+        f0 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ __
+    | R_validate_n_byte_2
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4) ->
+        let addr' = coq_Nplus addr0 x0 in
+        f1 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ __ x3 x4
+          (coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
+            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
+            to_be_checked_addresses0 x1 x3 x4)
+    | R_validate_n_byte_3
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4) ->
+        f2 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 x4 __ __ __ __
+    | R_validate_n_byte_4
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10) ->
+        f3 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
+          __ __ __ __
+    | R_validate_n_byte_5
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13) ->
+        let addr' = coq_Nplus addr0 x0 in
+        let addr'' = coq_Nplus addr' x8 in
+        f4 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
+          __ __ __ x11 __ x12 x13
+          (coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
+            f12 f13 f14 x11 addr'' (coq_Nadd addr0 valid_addresses0)
+            to_be_checked_addresses0 x9 x12 x13)
+    | R_validate_n_byte_6
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10) ->
+        f5 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
+          __ __ __
+    | R_validate_n_byte_7
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12) ->
+        let addr' = coq_Nplus addr0 x0 in
+        f6 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __ x7 x8 x9 __ x10
+          __ __ x11 x12
+          (coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
+            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
+            to_be_checked_addresses0 x1 x11 x12)
+    | R_validate_n_byte_8
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5, x6) ->
+        f7 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 __ __ x6 __
+    | R_validate_n_byte_9
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5, x6) ->
+        let addr' = coq_Nplus addr0 x0 in
+        f8 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 x4 __ __ __ x5 x6
+          (coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
+            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
+            to_be_checked_addresses0 x1 x5 x6)
+    | R_validate_n_byte_10
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5) ->
+        let addr' = coq_Nplus addr0 x0 in
+        f9 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 __ __ __ x4 x5
+          (coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
+            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
+            to_be_checked_addresses0 x1 x4 x5)
+    | R_validate_n_byte_11
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5) ->
+        let addr' = coq_Nplus addr0 x0 in
+        f10 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 __ __ __ __ x4 x5
+          (coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
+            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
+            to_be_checked_addresses0 x1 x4 x5)
+    | R_validate_n_byte_12
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3, x4, x5) ->
+        let addr' = coq_Nplus addr0 x0 in
+        let dest_addr = coq_N_of_word x3 in
+        f11 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 __ __ __ __ x4 x5
+          (coq_R_validate_n_byte_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11
+            f12 f13 f14 x2 addr' (coq_Nadd addr0 valid_addresses0)
+            (coq_Nadd dest_addr to_be_checked_addresses0) x1 x4 x5)
+    | R_validate_n_byte_13
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2) ->
+        f12 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ __
+    | R_validate_n_byte_14
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, a,
+         x, x0, x1, x2, x3) ->
+        f13 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ a
+          __ x x0 x1 __ x2 __ x3 __
+    | R_validate_n_byte_15
+        (n0, addr0, valid_addresses0, to_be_checked_addresses0, ll0, _x, e) ->
+        f14 n0 addr0 valid_addresses0 to_be_checked_addresses0 ll0 _x __ __ e
+          __
+  
+  (** val validate_n_byte_rect :
+      (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> __ -> 'a1)
+      -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N
+      -> __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __ ->
+      I.instruction -> coq_N -> byte lazy_list -> __ -> __ -> 'a1) -> (coq_N
+      -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __
+      -> ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> __ -> 'a1 -> 'a1) ->
+      (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N ->
+      __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __ ->
+      I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ ->
+      I.register -> word -> __ -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N
+      -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
+      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
+      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
+      I.register -> __ -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N ->
       coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
       ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
       coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
+      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
+      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
+      I.register -> __ -> __ -> __ -> coq_N -> __ -> 'a1 -> 'a1) -> (coq_N ->
+      coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
+      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
+      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
+      I.register -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
       coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
+      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
+      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
+      I.register instruction_classification -> __ -> __ -> 'a1 -> 'a1) ->
+      (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N ->
+      __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __ ->
+      I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ ->
+      I.register -> word -> __ -> __ -> __ -> coq_N -> __ -> __ -> string ->
+      __ -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list
+      -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) ->
+      __ -> I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ ->
+      I.register -> word -> __ -> __ -> __ -> 'a1 -> 'a1) -> (coq_N -> coq_N
+      -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
       ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
       coq_N -> byte lazy_list -> __ -> coq_N -> __ -> word -> __ -> __ -> __
       -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte
@@ -780,10 +1515,7 @@ module ValidatorCode =
       byte lazy_list -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
       lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
       coq_N -> __ -> I.register -> __ -> 'a1) -> (coq_N -> coq_N -> coq_NSet
-      -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> __ -> 'a1) -> (coq_N -> coq_N ->
-      coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ -> __ ->
+      -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ -> string -> __ ->
       'a1) -> coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> 'a1 **)
   
   let rec validate_n_byte_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 f13 f14 n addr valid_addresses to_be_checked_addresses ll =
@@ -837,7 +1569,7 @@ module ValidatorCode =
            let f59 = let _x = Npos p in f15 _x __ in
            let f60 = f59 __ in
            (match I.parse_instruction addr ll with
-              | Some p0 ->
+              | OK p0 ->
                   let f61 = f58 p0 __ in
                   let f62 = f56 p0 __ in
                   let f63 = f54 p0 __ in
@@ -870,25 +1602,25 @@ module ValidatorCode =
                   let f88 = f74 i n0 l __ in
                   (match safe_minus (Npos p) n0 with
                      | Some n1 ->
-                         let f89 = f88 n1 __ in
-                         let f90 = f87 n1 __ in
-                         let f91 = f86 n1 __ in
+                         let f89 = f87 n1 __ in
+                         let f90 = f86 n1 __ in
+                         let f91 = f85 n1 __ in
                          let f92 = fun reg1 w -> f91 reg1 w __ __ __ n1 __ in
-                         let f93 = f85 n1 __ in
+                         let f93 = f84 n1 __ in
                          let f94 = fun reg1 w -> f93 reg1 w __ __ __ n1 __ in
-                         let f95 = f84 n1 __ in
+                         let f95 = f83 n1 __ in
                          let f96 = fun reg1 w -> f95 reg1 w __ __ __ n1 __ in
-                         let f97 = f83 n1 __ in
+                         let f97 = f82 n1 __ in
                          let f98 = fun reg1 w -> f97 reg1 w __ __ __ n1 __ in
-                         let f99 = f82 n1 __ in
+                         let f99 = f81 n1 __ in
                          let f100 = fun reg1 w -> f99 reg1 w __ __ __ n1 __
                          in
-                         let f101 = f81 n1 __ in
-                         let f102 = f80 n1 __ in
-                         let f103 = f79 n1 __ in
-                         let f104 = f78 n1 __ in
-                         let f105 = f77 n1 __ in
-                         let f106 = f76 n1 __ in
+                         let f101 = f80 n1 __ in
+                         let f102 = f79 n1 __ in
+                         let f103 = f78 n1 __ in
+                         let f104 = f77 n1 __ in
+                         let f105 = f76 n1 __ in
+                         let f106 = f75 n1 __ in
                          (match I.classify_instruction i with
                             | OK_instr ->
                                 let f107 = f89 __ in
@@ -926,7 +1658,7 @@ module ValidatorCode =
                                             (match 
                                              I.parse_instruction
                                                (coq_Nplus addr n0) l with
-                                               | Some p3 ->
+                                               | OK p3 ->
                                                   let f125 = f124 p3 __ in
                                                   let f126 = f123 p3 __ in
                                                   let f127 = f122 p3 __ in
@@ -964,7 +1696,7 @@ module ValidatorCode =
                                                   safe_minus (Npos p2) n2 with
                                                     | 
                                                   Some n3 ->
-                                                  let f139 = f137 n3 __ in
+                                                  let f139 = f138 n3 __ in
                                                   let hrec =
                                                   validate_n_byte_rect f f0
                                                   f1 f2 f3 f4 f5 f6 f7 f8 f9
@@ -977,7 +1709,7 @@ module ValidatorCode =
                                                   in
                                                   f139 hrec
                                                     | 
-                                                  None -> f138 __)
+                                                  None -> f137 __)
                                                   else f134 __ __
                                                     | 
                                                   _ ->
@@ -993,7 +1725,7 @@ module ValidatorCode =
                                                   to_be_checked_addresses l
                                                   in
                                                   f134 hrec)
-                                               | None -> f120 __))
+                                               | Err s -> f120 s __))
                                 else let f114 = f107 __ __ in
                                      let hrec =
                                        validate_n_byte_rect f f0 f1 f2 f3 f4
@@ -1045,52 +1777,54 @@ module ValidatorCode =
                                           f112 hrec
                             | Indirect_jump r -> f106 r __
                             | Invalid_instruction -> f105 __)
-                     | None -> f75 __)
-              | None -> f60 __))
+                     | None -> f88 __)
+              | Err s -> f60 s __))
   
   (** val validate_n_byte_rec :
       (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> __ -> 'a1)
       -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N
       -> __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __ ->
-      I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ -> __ ->
-      'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte
-      lazy_list -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
-      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
-      coq_N -> __ -> I.register -> word -> __ -> __ -> __ -> __ -> 'a1) ->
+      I.instruction -> coq_N -> byte lazy_list -> __ -> __ -> 'a1) -> (coq_N
+      -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __
+      -> ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> __ -> 'a1 -> 'a1) ->
       (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N ->
       __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __ ->
       I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ ->
-      I.register -> word -> __ -> __ -> __ -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> I.register -> __ -> __ -> __ -> coq_N
-      -> __ -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte
-      lazy_list -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
-      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
-      coq_N -> __ -> I.register -> word -> __ -> __ -> __ -> coq_N -> __ ->
-      __ -> ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction
-      -> coq_N -> byte lazy_list -> __ -> I.register -> __ -> __ -> __ -> __
-      -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
-      coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __
-      -> I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ ->
-      I.register -> word -> __ -> __ -> __ -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> I.register -> __ -> __ -> __ -> 'a1)
-      -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N
-      -> __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __ ->
-      I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ ->
-      I.register -> word -> __ -> __ -> __ -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> I.register instruction_classification
-      -> __ -> __ -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet
-      -> byte lazy_list -> coq_N -> __ -> __ ->
+      I.register -> word -> __ -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N
+      -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
       ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
       coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> coq_N -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N ->
+      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
+      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
+      I.register -> __ -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N ->
       coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
       ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
       coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
-      __ -> __ -> __ -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
+      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
+      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
+      I.register -> __ -> __ -> __ -> coq_N -> __ -> 'a1 -> 'a1) -> (coq_N ->
+      coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
+      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
+      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
+      I.register -> __ -> __ -> __ -> 'a1) -> (coq_N -> coq_N -> coq_NSet ->
       coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
+      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
+      coq_N -> byte lazy_list -> __ -> coq_N -> __ -> I.register -> word ->
+      __ -> __ -> __ -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
+      lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
+      I.register instruction_classification -> __ -> __ -> 'a1 -> 'a1) ->
+      (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N ->
+      __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) -> __ ->
+      I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ ->
+      I.register -> word -> __ -> __ -> __ -> coq_N -> __ -> __ -> string ->
+      __ -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list
+      -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte lazy_list) ->
+      __ -> I.instruction -> coq_N -> byte lazy_list -> __ -> coq_N -> __ ->
+      I.register -> word -> __ -> __ -> __ -> 'a1 -> 'a1) -> (coq_N -> coq_N
+      -> coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
       ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
       coq_N -> byte lazy_list -> __ -> coq_N -> __ -> word -> __ -> __ -> __
       -> 'a1 -> 'a1) -> (coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte
@@ -1107,10 +1841,7 @@ module ValidatorCode =
       byte lazy_list -> coq_N -> __ -> __ -> ((I.instruction * coq_N) * byte
       lazy_list) -> __ -> I.instruction -> coq_N -> byte lazy_list -> __ ->
       coq_N -> __ -> I.register -> __ -> 'a1) -> (coq_N -> coq_N -> coq_NSet
-      -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ ->
-      ((I.instruction * coq_N) * byte lazy_list) -> __ -> I.instruction ->
-      coq_N -> byte lazy_list -> __ -> __ -> 'a1) -> (coq_N -> coq_N ->
-      coq_NSet -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ -> __ ->
+      -> coq_NSet -> byte lazy_list -> coq_N -> __ -> __ -> string -> __ ->
       'a1) -> coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> 'a1 **)
   
   let validate_n_byte_rec =
@@ -1118,60 +1849,60 @@ module ValidatorCode =
   
   (** val coq_R_validate_n_byte_correct :
       coq_N -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
-      ((coq_NSet * coq_NSet) * byte lazy_list) option ->
-      coq_R_validate_n_byte **)
+      ((coq_NSet * coq_NSet) * byte lazy_list) res -> coq_R_validate_n_byte **)
   
-  let coq_R_validate_n_byte_correct x x0 x1 x2 x3 res =
+  let coq_R_validate_n_byte_correct x x0 x1 x2 x3 res0 =
     validate_n_byte_rect (fun y y0 y1 y2 y3 _ z _ -> R_validate_n_byte_0 (y,
-      y0, y1, y2, y3))
+      y0, y1, y2, y3)) (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ _ z _ ->
+      R_validate_n_byte_1 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11))
       (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ _ y16 z _ ->
-      R_validate_n_byte_1 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13,
+      R_validate_n_byte_2 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13,
       (validate_n_byte y13 (coq_Nplus y0 y10) (coq_Nadd y0 y1) y2 y11),
       (y16 (validate_n_byte y13 (coq_Nplus y0 y10) (coq_Nadd y0 y1) y2 y11)
         __)))
       (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ y15 y16 _ _ _ _ z _ ->
-      R_validate_n_byte_2 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13, y15,
-      y16))
-      (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ y15 y16 _ _ _ y20 _ _ y23 _ y25 y26 y27 _ y29 _ _ _ y33 _ y35 z _ ->
       R_validate_n_byte_3 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13, y15,
+      y16))
+      (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ y15 y16 _ _ _ y20 _ _ y23 _ y25 y26 y27 _ y29 _ _ _ _ z _ ->
+      R_validate_n_byte_4 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13, y15,
+      y16, y20, y23, y25, y26, y27, y29))
+      (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ y15 y16 _ _ _ y20 _ _ y23 _ y25 y26 y27 _ y29 _ _ _ y33 _ y35 z _ ->
+      R_validate_n_byte_5 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13, y15,
       y16, y20, y23, y25, y26, y27, y29, y33,
       (validate_n_byte y33 (coq_Nplus (coq_Nplus y0 y10) y26)
         (coq_Nadd y0 y1) y2 y27),
       (y35
         (validate_n_byte y33 (coq_Nplus (coq_Nplus y0 y10) y26)
           (coq_Nadd y0 y1) y2 y27) __)))
-      (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ y15 y16 _ _ _ y20 _ _ y23 _ y25 y26 y27 _ y29 _ _ _ _ z _ ->
-      R_validate_n_byte_4 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13, y15,
-      y16, y20, y23, y25, y26, y27, y29))
       (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ y15 y16 _ _ _ y20 _ _ y23 _ y25 y26 y27 _ y29 _ _ _ z _ ->
-      R_validate_n_byte_5 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13, y15,
+      R_validate_n_byte_6 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13, y15,
       y16, y20, y23, y25, y26, y27, y29))
       (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ y15 y16 _ _ _ y20 _ _ y23 _ y25 y26 y27 _ y29 _ _ y32 z _ ->
-      R_validate_n_byte_6 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13, y15,
+      R_validate_n_byte_7 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13, y15,
       y16, y20, y23, y25, y26, y27, y29,
       (validate_n_byte y13 (coq_Nplus y0 y10) (coq_Nadd y0 y1) y2 y11),
       (y32 (validate_n_byte y13 (coq_Nplus y0 y10) (coq_Nadd y0 y1) y2 y11)
         __)))
-      (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ y15 y16 _ _ _ y20 _ _ _ z _ ->
-      R_validate_n_byte_7 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13, y15,
-      y16, y20))
-      (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ y15 y16 _ _ _ y20 z _ ->
+      (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ y15 y16 _ _ _ y20 _ _ y23 _ z _ ->
       R_validate_n_byte_8 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13, y15,
+      y16, y20, y23))
+      (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ y15 y16 _ _ _ y20 z _ ->
+      R_validate_n_byte_9 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13, y15,
       y16, (validate_n_byte y13 (coq_Nplus y0 y10) (coq_Nadd y0 y1) y2 y11),
       (y20 (validate_n_byte y13 (coq_Nplus y0 y10) (coq_Nadd y0 y1) y2 y11)
         __)))
       (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ y15 _ _ _ y19 z _ ->
-      R_validate_n_byte_9 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13, y15,
-      (validate_n_byte y13 (coq_Nplus y0 y10) (coq_Nadd y0 y1) y2 y11),
+      R_validate_n_byte_10 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13,
+      y15, (validate_n_byte y13 (coq_Nplus y0 y10) (coq_Nadd y0 y1) y2 y11),
       (y19 (validate_n_byte y13 (coq_Nplus y0 y10) (coq_Nadd y0 y1) y2 y11)
         __)))
       (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ y15 _ _ _ _ y20 z _ ->
-      R_validate_n_byte_10 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13,
+      R_validate_n_byte_11 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13,
       y15, (validate_n_byte y13 (coq_Nplus y0 y10) (coq_Nadd y0 y1) y2 y11),
       (y20 (validate_n_byte y13 (coq_Nplus y0 y10) (coq_Nadd y0 y1) y2 y11)
         __)))
       (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ y15 _ _ _ _ y20 z _ ->
-      R_validate_n_byte_11 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13,
+      R_validate_n_byte_12 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13,
       y15,
       (validate_n_byte y13 (coq_Nplus y0 y10) (coq_Nadd y0 y1)
         (coq_Nadd (coq_N_of_word y15) y2) y11),
@@ -1179,13 +1910,21 @@ module ValidatorCode =
         (validate_n_byte y13 (coq_Nplus y0 y10) (coq_Nadd y0 y1)
           (coq_Nadd (coq_N_of_word y15) y2) y11) __)))
       (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ _ z _ ->
-      R_validate_n_byte_12 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13))
+      R_validate_n_byte_13 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13))
       (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ y13 _ y15 _ z _ ->
-      R_validate_n_byte_13 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13,
-      y15)) (fun y y0 y1 y2 y3 y4 _ _ y7 _ y9 y10 y11 _ _ z _ ->
-      R_validate_n_byte_14 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11))
-      (fun y y0 y1 y2 y3 y4 _ _ _ z _ -> R_validate_n_byte_15 (y, y0, y1, y2,
-      y3, y4)) x x0 x1 x2 x3 res __
+      R_validate_n_byte_14 (y, y0, y1, y2, y3, y4, y7, y9, y10, y11, y13,
+      y15)) (fun y y0 y1 y2 y3 y4 _ _ y7 _ z _ -> R_validate_n_byte_15 (y,
+      y0, y1, y2, y3, y4, y7)) x x0 x1 x2 x3 res0 __
+  
+  (** val _MARK__rect : 'a1 -> 'a1 **)
+  
+  let _MARK__rect f =
+    f
+  
+  (** val _MARK__rec : 'a1 -> 'a1 **)
+  
+  let _MARK__rec f =
+    f
   
   (** val eq_rew_dep : 'a1 -> 'a2 -> 'a1 -> 'a2 **)
   
@@ -1194,48 +1933,46 @@ module ValidatorCode =
   
   (** val validate_ll_list_F :
       (coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
-      (coq_NSet * coq_NSet) option) -> coq_N -> coq_NSet -> coq_NSet -> byte
-      lazy_list -> (coq_NSet * coq_NSet) option **)
+      (coq_NSet * coq_NSet) res) -> coq_N -> coq_NSet -> coq_NSet -> byte
+      lazy_list -> (coq_NSet * coq_NSet) res **)
   
   let validate_ll_list_F validate_ll_list0 addr valid_addresses to_be_checked_addresses ll =
     match validate_n_byte (Npos (Coq_xO (Coq_xO (Coq_xO (Coq_xO (Coq_xO
             Coq_xH)))))) addr valid_addresses to_be_checked_addresses ll with
-      | Some a ->
+      | OK a ->
           let (p, ll') = a in
           let (valid_addresses', to_be_checked_addresses') = p in
           (match ll' with
-             | Coq_ll_nil -> Some (valid_addresses',
-                 to_be_checked_addresses')
+             | Coq_ll_nil -> OK (valid_addresses', to_be_checked_addresses')
              | Coq_ll_cons (x, l) ->
                  validate_ll_list0
                    (coq_Nplus addr (Npos (Coq_xO (Coq_xO (Coq_xO (Coq_xO
                      (Coq_xO Coq_xH))))))) valid_addresses'
                    to_be_checked_addresses' ll')
-      | None -> None
+      | Err e -> Err e
   
   (** val validate_ll_list_terminate :
       coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
-      (coq_NSet * coq_NSet) option **)
+      (coq_NSet * coq_NSet) res **)
   
   let rec validate_ll_list_terminate addr valid_addresses to_be_checked_addresses ll =
     match validate_n_byte (Npos (Coq_xO (Coq_xO (Coq_xO (Coq_xO (Coq_xO
             Coq_xH)))))) addr valid_addresses to_be_checked_addresses ll with
-      | Some a ->
+      | OK a ->
           let (p, ll') = a in
           let (valid_addresses', to_be_checked_addresses') = p in
           (match ll' with
-             | Coq_ll_nil -> Some (valid_addresses',
-                 to_be_checked_addresses')
+             | Coq_ll_nil -> OK (valid_addresses', to_be_checked_addresses')
              | Coq_ll_cons (x, l) ->
                  validate_ll_list_terminate
                    (coq_Nplus addr (Npos (Coq_xO (Coq_xO (Coq_xO (Coq_xO
                      (Coq_xO Coq_xH))))))) valid_addresses'
                    to_be_checked_addresses' (Coq_ll_cons (x, l)))
-      | None -> None
+      | Err e -> Err e
   
   (** val validate_ll_list :
       coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
-      (coq_NSet * coq_NSet) option **)
+      (coq_NSet * coq_NSet) res **)
   
   let validate_ll_list x x0 x1 x2 =
     validate_ll_list_terminate x x0 x1 x2
@@ -1247,8 +1984,9 @@ module ValidatorCode =
     | R_validate_ll_list_1 of coq_N * coq_NSet * coq_NSet * 
        byte lazy_list * ((coq_NSet * coq_NSet) * byte lazy_list) * 
        coq_NSet * coq_NSet * byte lazy_list * byte lazy_list
-       * (coq_NSet * coq_NSet) option * coq_R_validate_ll_list
-    | R_validate_ll_list_2 of coq_N * coq_NSet * coq_NSet * byte lazy_list
+       * (coq_NSet * coq_NSet) res * coq_R_validate_ll_list
+    | R_validate_ll_list_2 of coq_N * coq_NSet * coq_NSet * 
+       byte lazy_list * string
   
   (** val coq_R_validate_ll_list_rect :
       (coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
@@ -1256,12 +1994,12 @@ module ValidatorCode =
       -> byte lazy_list -> __ -> __ -> 'a1) -> (coq_N -> coq_NSet -> coq_NSet
       -> byte lazy_list -> ((coq_NSet * coq_NSet) * byte lazy_list) -> __ ->
       coq_NSet -> coq_NSet -> byte lazy_list -> __ -> byte lazy_list -> __ ->
-      __ -> (coq_NSet * coq_NSet) option -> coq_R_validate_ll_list -> 'a1 ->
-      'a1) -> (coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> __ -> 'a1)
-      -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
-      (coq_NSet * coq_NSet) option -> coq_R_validate_ll_list -> 'a1 **)
+      __ -> (coq_NSet * coq_NSet) res -> coq_R_validate_ll_list -> 'a1 ->
+      'a1) -> (coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> string ->
+      __ -> 'a1) -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
+      (coq_NSet * coq_NSet) res -> coq_R_validate_ll_list -> 'a1 **)
   
-  let rec coq_R_validate_ll_list_rect f f0 f1 addr valid_addresses to_be_checked_addresses ll o = function
+  let rec coq_R_validate_ll_list_rect f f0 f1 addr valid_addresses to_be_checked_addresses ll r = function
     | R_validate_ll_list_0
         (addr0, valid_addresses0, to_be_checked_addresses0, ll0, a, x, x0, x1) ->
         f addr0 valid_addresses0 to_be_checked_addresses0 ll0 a __ x x0 x1 __
@@ -1275,8 +2013,8 @@ module ValidatorCode =
             (coq_Nplus addr0 (Npos (Coq_xO (Coq_xO (Coq_xO (Coq_xO (Coq_xO
               Coq_xH))))))) x x0 x1 x3 x4)
     | R_validate_ll_list_2
-        (addr0, valid_addresses0, to_be_checked_addresses0, ll0) ->
-        f1 addr0 valid_addresses0 to_be_checked_addresses0 ll0 __
+        (addr0, valid_addresses0, to_be_checked_addresses0, ll0, e) ->
+        f1 addr0 valid_addresses0 to_be_checked_addresses0 ll0 e __
   
   (** val coq_R_validate_ll_list_rec :
       (coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
@@ -1284,12 +2022,12 @@ module ValidatorCode =
       -> byte lazy_list -> __ -> __ -> 'a1) -> (coq_N -> coq_NSet -> coq_NSet
       -> byte lazy_list -> ((coq_NSet * coq_NSet) * byte lazy_list) -> __ ->
       coq_NSet -> coq_NSet -> byte lazy_list -> __ -> byte lazy_list -> __ ->
-      __ -> (coq_NSet * coq_NSet) option -> coq_R_validate_ll_list -> 'a1 ->
-      'a1) -> (coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> __ -> 'a1)
-      -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
-      (coq_NSet * coq_NSet) option -> coq_R_validate_ll_list -> 'a1 **)
+      __ -> (coq_NSet * coq_NSet) res -> coq_R_validate_ll_list -> 'a1 ->
+      'a1) -> (coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> string ->
+      __ -> 'a1) -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
+      (coq_NSet * coq_NSet) res -> coq_R_validate_ll_list -> 'a1 **)
   
-  let rec coq_R_validate_ll_list_rec f f0 f1 addr valid_addresses to_be_checked_addresses ll o = function
+  let rec coq_R_validate_ll_list_rec f f0 f1 addr valid_addresses to_be_checked_addresses ll r = function
     | R_validate_ll_list_0
         (addr0, valid_addresses0, to_be_checked_addresses0, ll0, a, x, x0, x1) ->
         f addr0 valid_addresses0 to_be_checked_addresses0 ll0 a __ x x0 x1 __
@@ -1303,8 +2041,8 @@ module ValidatorCode =
             (coq_Nplus addr0 (Npos (Coq_xO (Coq_xO (Coq_xO (Coq_xO (Coq_xO
               Coq_xH))))))) x x0 x1 x3 x4)
     | R_validate_ll_list_2
-        (addr0, valid_addresses0, to_be_checked_addresses0, ll0) ->
-        f1 addr0 valid_addresses0 to_be_checked_addresses0 ll0 __
+        (addr0, valid_addresses0, to_be_checked_addresses0, ll0, e) ->
+        f1 addr0 valid_addresses0 to_be_checked_addresses0 ll0 e __
   
   (** val validate_ll_list_rect :
       (coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
@@ -1313,7 +2051,8 @@ module ValidatorCode =
       -> byte lazy_list -> ((coq_NSet * coq_NSet) * byte lazy_list) -> __ ->
       coq_NSet -> coq_NSet -> byte lazy_list -> __ -> byte lazy_list -> __ ->
       __ -> 'a1 -> 'a1) -> (coq_N -> coq_NSet -> coq_NSet -> byte lazy_list
-      -> __ -> 'a1) -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> 'a1 **)
+      -> string -> __ -> 'a1) -> coq_N -> coq_NSet -> coq_NSet -> byte
+      lazy_list -> 'a1 **)
   
   let rec validate_ll_list_rect f f0 f1 addr valid_addresses to_be_checked_addresses ll =
     let f2 = f1 addr valid_addresses to_be_checked_addresses ll in
@@ -1321,7 +2060,7 @@ module ValidatorCode =
     let f4 = f addr valid_addresses to_be_checked_addresses ll in
     (match validate_n_byte (Npos (Coq_xO (Coq_xO (Coq_xO (Coq_xO (Coq_xO
              Coq_xH)))))) addr valid_addresses to_be_checked_addresses ll with
-       | Some p ->
+       | OK p ->
            let f5 = f4 p __ in
            let f6 = f3 p __ in
            let (p0, l) = p in
@@ -1339,7 +2078,7 @@ module ValidatorCode =
                         (Coq_xO Coq_xH))))))) n n0 (Coq_ll_cons (x, l0))
                   in
                   f10 hrec)
-       | None -> f2 __)
+       | Err s -> f2 s __)
   
   (** val validate_ll_list_rec :
       (coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
@@ -1348,16 +2087,17 @@ module ValidatorCode =
       -> byte lazy_list -> ((coq_NSet * coq_NSet) * byte lazy_list) -> __ ->
       coq_NSet -> coq_NSet -> byte lazy_list -> __ -> byte lazy_list -> __ ->
       __ -> 'a1 -> 'a1) -> (coq_N -> coq_NSet -> coq_NSet -> byte lazy_list
-      -> __ -> 'a1) -> coq_N -> coq_NSet -> coq_NSet -> byte lazy_list -> 'a1 **)
+      -> string -> __ -> 'a1) -> coq_N -> coq_NSet -> coq_NSet -> byte
+      lazy_list -> 'a1 **)
   
   let validate_ll_list_rec =
     validate_ll_list_rect
   
   (** val coq_R_validate_ll_list_correct :
       coq_N -> coq_NSet -> coq_NSet -> byte lazy_list ->
-      (coq_NSet * coq_NSet) option -> coq_R_validate_ll_list **)
+      (coq_NSet * coq_NSet) res -> coq_R_validate_ll_list **)
   
-  let coq_R_validate_ll_list_correct x x0 x1 x2 res =
+  let coq_R_validate_ll_list_correct x x0 x1 x2 res0 =
     validate_ll_list_rect (fun y y0 y1 y2 y3 _ y5 y6 y7 _ _ z _ ->
       R_validate_ll_list_0 (y, y0, y1, y2, y3, y5, y6, y7))
       (fun y y0 y1 y2 y3 _ y5 y6 y7 _ y9 _ _ y12 z _ -> R_validate_ll_list_1
@@ -1368,16 +2108,60 @@ module ValidatorCode =
       (y12
         (validate_ll_list
           (coq_Nplus y (Npos (Coq_xO (Coq_xO (Coq_xO (Coq_xO (Coq_xO
-            Coq_xH))))))) y5 y6 y7) __))) (fun y y0 y1 y2 _ z _ ->
-      R_validate_ll_list_2 (y, y0, y1, y2)) x x0 x1 x2 res __
+            Coq_xH))))))) y5 y6 y7) __))) (fun y y0 y1 y2 y3 _ z _ ->
+      R_validate_ll_list_2 (y, y0, y1, y2, y3)) x x0 x1 x2 res0 __
   
-  (** val validate_program : byte lazy_list -> bool **)
+  (** val validate_program : byte lazy_list -> unit res **)
   
   let validate_program ll =
     match validate_ll_list header_size coq_Nempty coq_Nempty ll with
-      | Some p ->
-          let (valid_addresses, to_be_checked_addresses) = p in
-          is_Nincluded to_be_checked_addresses valid_addresses
-      | None -> false
+      | OK a ->
+          let (valid_addresses, to_be_checked_addresses) = a in
+          if is_Nincluded to_be_checked_addresses valid_addresses
+          then OK ()
+          else Err (String ((Ascii (false, false, true, false, false, false,
+                 true, false)), (String ((Ascii (true, false, false, true,
+                 false, true, true, false)), (String ((Ascii (false, true,
+                 false, false, true, true, true, false)), (String ((Ascii
+                 (true, false, true, false, false, true, true, false)),
+                 (String ((Ascii (true, true, false, false, false, true,
+                 true, false)), (String ((Ascii (false, false, true, false,
+                 true, true, true, false)), (String ((Ascii (false, false,
+                 false, false, false, true, false, false)), (String ((Ascii
+                 (false, true, false, true, false, true, true, false)),
+                 (String ((Ascii (true, false, true, false, true, true, true,
+                 false)), (String ((Ascii (true, false, true, true, false,
+                 true, true, false)), (String ((Ascii (false, false, false,
+                 false, true, true, true, false)), (String ((Ascii (false,
+                 false, false, false, false, true, false, false)), (String
+                 ((Ascii (false, false, true, false, true, true, true,
+                 false)), (String ((Ascii (true, true, true, true, false,
+                 true, true, false)), (String ((Ascii (false, false, false,
+                 false, false, true, false, false)), (String ((Ascii (true,
+                 false, false, false, false, true, true, false)), (String
+                 ((Ascii (false, true, true, true, false, true, true,
+                 false)), (String ((Ascii (false, false, false, false, false,
+                 true, false, false)), (String ((Ascii (true, false, false,
+                 true, false, true, true, false)), (String ((Ascii (false,
+                 true, true, true, false, true, true, false)), (String
+                 ((Ascii (false, true, true, false, true, true, true,
+                 false)), (String ((Ascii (true, false, false, false, false,
+                 true, true, false)), (String ((Ascii (false, false, true,
+                 true, false, true, true, false)), (String ((Ascii (true,
+                 false, false, true, false, true, true, false)), (String
+                 ((Ascii (false, false, true, false, false, true, true,
+                 false)), (String ((Ascii (false, false, false, false, false,
+                 true, false, false)), (String ((Ascii (true, false, false,
+                 false, false, true, true, false)), (String ((Ascii (false,
+                 false, true, false, false, true, true, false)), (String
+                 ((Ascii (false, false, true, false, false, true, true,
+                 false)), (String ((Ascii (false, true, false, false, true,
+                 true, true, false)), (String ((Ascii (true, false, true,
+                 false, false, true, true, false)), (String ((Ascii (true,
+                 true, false, false, true, true, true, false)), (String
+                 ((Ascii (true, true, false, false, true, true, true,
+                 false)),
+                 EmptyString))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+      | Err e -> Err e
  end
 
